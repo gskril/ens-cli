@@ -2,7 +2,7 @@ import { z } from 'incur'
 import { encodeFunctionData } from 'viem'
 import { ethRegistrarControllerAbi, addresses } from '../lib/contracts.ts'
 import { globalOptions, globalEnv, clientFromContext } from '../lib/context.ts'
-import { extractLabel } from '../lib/utils.ts'
+import { extractLabel, validateWeiValue } from '../lib/utils.ts'
 
 const ONE_YEAR = 31536000n
 const ZERO_BYTES32 = '0x0000000000000000000000000000000000000000000000000000000000000000' as const
@@ -39,7 +39,7 @@ export const renewCommand = {
     return {
       to: controllerAddress,
       data,
-      value: c.options.value,
+      value: validateWeiValue(c.options.value),
       name: c.args.name,
       label,
       duration: duration.toString(),
