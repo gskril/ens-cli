@@ -1,3 +1,4 @@
+import { isAddress, isHex } from 'viem'
 import { normalize } from 'viem/ens'
 
 export function validateName(name: string): string {
@@ -26,4 +27,38 @@ export function extractLabel(name: string): string {
     )
   }
   return label
+}
+
+export function validateAddress(address: string): `0x${string}` {
+  if (!isAddress(address)) {
+    throw new Error(
+      `Invalid Ethereum address: "${address}". Must be a 0x-prefixed address (all-lowercase or EIP-55 checksummed).`,
+    )
+  }
+  return address as `0x${string}`
+}
+
+export function validateWeiValue(value: string): string {
+  if (!/^\d+$/.test(value)) {
+    throw new Error(
+      `Invalid wei value: "${value}". Must be a non-negative integer (e.g. "2307947853431408"). Run 'ens price <name>' to get the current cost.`,
+    )
+  }
+  return value
+}
+
+export function validateBytes32(value: string): `0x${string}` {
+  if (!isHex(value) || value.length !== 66) {
+    throw new Error(
+      `Invalid bytes32 value: "${value}". Must be a 0x-prefixed 32-byte hex string.`,
+    )
+  }
+  return value as `0x${string}`
+}
+
+export function validateHex(value: string): `0x${string}` {
+  if (!isHex(value, { strict: true }) || (value.length > 2 && value.length % 2 !== 0)) {
+    throw new Error(`Invalid hex value: "${value}". Must be a 0x-prefixed hex string with even length.`)
+  }
+  return value as `0x${string}`
 }
