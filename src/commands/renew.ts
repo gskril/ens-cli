@@ -9,13 +9,13 @@ const ZERO_BYTES32 = '0x00000000000000000000000000000000000000000000000000000000
 
 export const renewCommand = {
   description:
-    'Generate renewal transaction calldata for an ENS name. Requires a value (in wei) from the price command.',
+    'Generate renewal transaction calldata for an ENS name. Requires a value (in wei) from the price command. IMPORTANT: Always fetch price immediately before sending this transaction, not earlier, because the required ETH amount changes with the ETH/USD price.',
   args: z.object({
     name: z.string().describe('ENS name to renew (e.g. myname.eth)'),
   }),
   options: globalOptions.merge(
     z.object({
-      value: z.string().describe('ETH value in wei to send (get from ens price)'),
+      value: z.string().describe('ETH value in wei to send (use bufferedTotal from ens price, fetched immediately before this step)'),
       duration: z.coerce
         .bigint()
         .optional()
