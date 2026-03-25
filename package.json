@@ -1,0 +1,20 @@
+{
+  "name": "@ensdomains/cli",
+  "version": "0.1.0",
+  "module": "src/index.ts",
+  "type": "module",
+  "bin": {
+    "ens": "src/index.ts"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "prettier": "^3.8.1"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "incur": "^0.3.13",
+    "viem": "^2.47.6"
+  }
+}

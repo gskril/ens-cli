@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cd /Users/Greg/Desktop/crypto/ENS/cli && bunx prettier --write \"src/**/*.ts\" 2>/dev/null || true",
+            "statusMessage": "Formatting with prettier..."
+          }
+        ]
+      }
+    ]
+  }
+}
