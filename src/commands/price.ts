@@ -2,12 +2,9 @@ import { z } from 'incur'
 import { formatEther } from 'viem'
 import { ethRegistrarControllerAbi, addresses } from '../lib/contracts.ts'
 import { globalOptions, globalEnv, clientFromContext } from '../lib/context.ts'
+import { extractLabel } from '../lib/utils.ts'
 
 const ONE_YEAR = 31536000n
-
-function extractLabel(name: string): string {
-  return name.replace(/\.eth$/, '')
-}
 
 export const priceCommand = {
   description:

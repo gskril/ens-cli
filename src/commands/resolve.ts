@@ -1,5 +1,5 @@
 import { z } from 'incur'
-import { normalize } from 'viem/ens'
+import { validateName } from '../lib/utils.ts'
 import { getEnsAddress, getEnsName, getEnsText, getEnsAvatar } from 'viem/ens'
 import { globalOptions, globalEnv, clientFromContext } from '../lib/context.ts'
 import { resolveCoinType } from '../lib/cointype.ts'
@@ -27,7 +27,7 @@ export const resolveCommand = {
   alias: { coinType: 'c', chainId: 'i' },
   async run(c: any) {
     const { client } = clientFromContext(c)
-    const name = normalize(c.args.name)
+    const name = validateName(c.args.name)
     const coinType = resolveCoinType(c.options)
     const address = await getEnsAddress(client, {
       name,
@@ -75,7 +75,7 @@ export const textCommand = {
   env: globalEnv,
   async run(c: any) {
     const { client } = clientFromContext(c)
-    const name = normalize(c.args.name)
+    const name = validateName(c.args.name)
     const value = await getEnsText(client, { name, key: c.args.key })
     return { name, key: c.args.key, value }
   },
@@ -90,7 +90,7 @@ export const avatarCommand = {
   env: globalEnv,
   async run(c: any) {
     const { client } = clientFromContext(c)
-    const name = normalize(c.args.name)
+    const name = validateName(c.args.name)
     const avatar = await getEnsAvatar(client, { name })
     return { name, avatar }
   },

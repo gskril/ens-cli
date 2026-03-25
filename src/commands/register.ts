@@ -2,14 +2,11 @@ import { Cli, z } from 'incur'
 import { encodeFunctionData, toHex } from 'viem'
 import { ethRegistrarControllerAbi, addresses } from '../lib/contracts.ts'
 import { globalOptions, globalEnv, clientFromContext } from '../lib/context.ts'
+import { extractLabel } from '../lib/utils.ts'
 
 const ONE_YEAR = 31536000n
 const ZERO_BYTES32 =
   '0x0000000000000000000000000000000000000000000000000000000000000000' as const
-
-function extractLabel(name: string): string {
-  return name.replace(/\.eth$/, '')
-}
 
 function generateSecret(): `0x${string}` {
   const bytes = new Uint8Array(32)
@@ -118,6 +115,12 @@ export const registerCommands = Cli.create('register', {
         duration: duration.toString(),
         resolver,
         reverseRecord,
+        nextSteps: [
+          '1. Broadcast this commit transaction',
+          '2. Wait at least 60 seconds after the tx is mined',
+          `3. Run: ens price ${c.args.name} -- to get the required value`,
+          `4. Run: ens register reveal ${c.args.name} ${c.args.owner} --secret ${secret} --value <total from price>`,
+        ],
       }
     },
   })

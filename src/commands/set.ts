@@ -1,6 +1,7 @@
 import { Cli, z } from 'incur'
 import { encodeFunctionData } from 'viem'
-import { namehash, normalize } from 'viem/ens'
+import { namehash } from 'viem/ens'
+import { validateName } from '../lib/utils.ts'
 import { publicResolverAbi, addresses } from '../lib/contracts.ts'
 import { globalOptions, globalEnv, clientFromContext } from '../lib/context.ts'
 import { resolveCoinType } from '../lib/cointype.ts'
@@ -78,7 +79,7 @@ export const setCommands = Cli.create('set', {
     async run(c) {
       const { chain } = clientFromContext(c as any)
       const resolverAddress = addresses[chain].resolver
-      const node = namehash(normalize(c.args.name))
+      const node = namehash(validateName(c.args.name))
       const coinType = resolveCoinType(c.options)
       const data = encodeSetAddr(node, c.args.address, coinType)
       return { to: resolverAddress, data, value: '0' }
@@ -96,7 +97,7 @@ export const setCommands = Cli.create('set', {
     async run(c) {
       const { chain } = clientFromContext(c as any)
       const resolverAddress = addresses[chain].resolver
-      const node = namehash(normalize(c.args.name))
+      const node = namehash(validateName(c.args.name))
       const data = encodeSetText(node, c.args.key, c.args.value)
       return { to: resolverAddress, data, value: '0' }
     },
@@ -112,7 +113,7 @@ export const setCommands = Cli.create('set', {
     async run(c) {
       const { chain } = clientFromContext(c as any)
       const resolverAddress = addresses[chain].resolver
-      const node = namehash(normalize(c.args.name))
+      const node = namehash(validateName(c.args.name))
       const data = encodeSetContenthash(node, c.args.hash)
       return { to: resolverAddress, data, value: '0' }
     },
@@ -136,7 +137,7 @@ export const setCommands = Cli.create('set', {
     async run(c) {
       const { chain } = clientFromContext(c as any)
       const resolverAddress = addresses[chain].resolver
-      const node = namehash(normalize(c.args.name))
+      const node = namehash(validateName(c.args.name))
       const operations: BatchOperation[] = JSON.parse(c.options.data)
       const calls = operations.map((op) => encodeBatchOperation(node, op))
 

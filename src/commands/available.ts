@@ -1,10 +1,7 @@
 import { z } from 'incur'
 import { ethRegistrarControllerAbi, addresses } from '../lib/contracts.ts'
 import { globalOptions, globalEnv, clientFromContext } from '../lib/context.ts'
-
-function extractLabel(name: string): string {
-  return name.replace(/\.eth$/, '')
-}
+import { extractLabel } from '../lib/utils.ts'
 
 export const availableCommand = {
   description: 'Check if an ENS name is available for registration',
