@@ -17,9 +17,7 @@ export function extractLabel(name: string): string {
   const normalized = validateName(name)
   const parts = normalized.split('.')
   if (parts.length !== 2 || parts[1] !== 'eth') {
-    throw new Error(
-      `Registration only supports 2LDs (e.g. name.eth). Got: ${normalized}`,
-    )
+    throw new Error(`Registration only supports 2LDs (e.g. name.eth). Got: ${normalized}`)
   }
   const label = parts[0]!
   if (label.length < 3) {

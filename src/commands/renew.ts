@@ -5,8 +5,7 @@ import { globalOptions, globalEnv, clientFromContext } from '../lib/context.ts'
 import { extractLabel } from '../lib/utils.ts'
 
 const ONE_YEAR = 31536000n
-const ZERO_BYTES32 =
-  '0x0000000000000000000000000000000000000000000000000000000000000000' as const
+const ZERO_BYTES32 = '0x0000000000000000000000000000000000000000000000000000000000000000' as const
 
 export const renewCommand = {
   description:

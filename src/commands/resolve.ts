@@ -5,10 +5,7 @@ import { globalOptions, globalEnv, clientFromContext } from '../lib/context.ts'
 import { resolveCoinType } from '../lib/cointype.ts'
 
 const coinTypeOptions = z.object({
-  coinType: z.coerce
-    .number()
-    .optional()
-    .describe('ENSIP-9 coin type (e.g. 0 for BTC, 60 for ETH)'),
+  coinType: z.coerce.number().optional().describe('ENSIP-9 coin type (e.g. 0 for BTC, 60 for ETH)'),
   chainId: z.coerce
     .number()
     .optional()

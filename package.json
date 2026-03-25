@@ -6,6 +6,9 @@
   "bin": {
     "ens": "src/index.ts"
   },
+  "scripts": {
+    "format": "prettier --write ."
+  },
   "devDependencies": {
     "@types/bun": "latest",
     "prettier": "^3.8.1"
