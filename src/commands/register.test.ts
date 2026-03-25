@@ -172,13 +172,14 @@ describe('ABI encoding correctness', () => {
 
   test('makeCommitment ABI has a tuple input with 8 components', () => {
     expect(makeCommitmentAbi.inputs).toHaveLength(1)
-    const tupleInput = makeCommitmentAbi.inputs[0]
+    const tupleInput = makeCommitmentAbi.inputs[0] as { type: string; components: readonly unknown[] }
     expect(tupleInput.type).toBe('tuple')
     expect(tupleInput.components).toHaveLength(8)
   })
 
   test('makeCommitment ABI components have expected names and types', () => {
-    const components = makeCommitmentAbi.inputs[0].components
+    const tupleInput = makeCommitmentAbi.inputs[0] as { components: readonly { name: string; type: string }[] }
+    const components = tupleInput.components
     expect(components[0]).toMatchObject({ name: 'label', type: 'string' })
     expect(components[1]).toMatchObject({ name: 'owner', type: 'address' })
     expect(components[2]).toMatchObject({ name: 'duration', type: 'uint256' })
