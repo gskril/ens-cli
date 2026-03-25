@@ -1,5 +1,5 @@
 import { Cli, z } from 'incur'
-import { encodeFunctionData, toHex } from 'viem'
+import { encodeAbiParameters, encodeFunctionData, keccak256, toHex } from 'viem'
 import { ethRegistrarControllerAbi, addresses } from '../lib/contracts.ts'
 import { globalOptions, globalEnv, clientFromContext } from '../lib/context.ts'
 import { extractLabel } from '../lib/utils.ts'
@@ -89,12 +89,15 @@ export const registerCommands = Cli.create('register', {
         reverseRecord,
       })
 
-      const commitment = await client.readContract({
-        address: controllerAddress,
-        abi: ethRegistrarControllerAbi,
-        functionName: 'makeCommitment',
-        args: [registration],
-      })
+      // Compute commitment locally so the registration secret never leaves the machine.
+      const makeCommitmentAbi = ethRegistrarControllerAbi.find(
+        (x) => x.type === 'function' && x.name === 'makeCommitment',
+      )
+      if (!makeCommitmentAbi || makeCommitmentAbi.type !== 'function') {
+        throw new Error('makeCommitment ABI entry not found - contract ABI may have changed')
+      }
+      const encoded = encodeAbiParameters(makeCommitmentAbi.inputs, [registration])
+      const commitment = keccak256(encoded)
 
       const data = encodeFunctionData({
         abi: ethRegistrarControllerAbi,
