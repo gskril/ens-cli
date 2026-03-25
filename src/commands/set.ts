@@ -1,7 +1,7 @@
 import { Cli, z } from 'incur'
 import { encodeFunctionData } from 'viem'
 import { namehash } from 'viem/ens'
-import { validateName } from '../lib/utils.ts'
+import { validateName, validateAddress, validateHex } from '../lib/utils.ts'
 import { publicResolverAbi, addresses } from '../lib/contracts.ts'
 import { globalOptions, globalEnv, clientFromContext } from '../lib/context.ts'
 import { resolveCoinType } from '../lib/cointype.ts'
@@ -11,18 +11,18 @@ type BatchOperation =
   | { type: 'text'; key: string; value: string }
   | { type: 'contenthash'; hash: string }
 
-function encodeSetAddr(node: `0x${string}`, address: string, coinType?: number): `0x${string}` {
+function encodeSetAddr(node: `0x${string}`, address: `0x${string}`, coinType?: number): `0x${string}` {
   if (coinType != null) {
     return encodeFunctionData({
       abi: publicResolverAbi,
       functionName: 'setAddr',
-      args: [node, BigInt(coinType), address as `0x${string}`],
+      args: [node, BigInt(coinType), address],
     })
   }
   return encodeFunctionData({
     abi: publicResolverAbi,
     functionName: 'setAddr',
-    args: [node, address as `0x${string}`],
+    args: [node, address],
   })
 }
 
@@ -38,14 +38,20 @@ function encodeSetContenthash(node: `0x${string}`, hash: string): `0x${string}` 
   return encodeFunctionData({
     abi: publicResolverAbi,
     functionName: 'setContenthash',
-    args: [node, hash as `0x${string}`],
+    args: [node, validateHex(hash)],
   })
 }
 
 function encodeBatchOperation(node: `0x${string}`, op: BatchOperation): `0x${string}` {
   switch (op.type) {
-    case 'address':
-      return encodeSetAddr(node, op.address, resolveCoinType(op))
+    case 'address': {
+      const coinType = resolveCoinType(op)
+      const validated =
+        coinType == null || coinType === 60
+          ? validateAddress(op.address)
+          : validateHex(op.address)
+      return encodeSetAddr(node, validated, coinType)
+    }
     case 'text':
       return encodeSetText(node, op.key, op.value)
     case 'contenthash':
@@ -81,7 +87,12 @@ export const setCommands = Cli.create('set', {
       const resolverAddress = addresses[chain].resolver
       const node = namehash(validateName(c.args.name))
       const coinType = resolveCoinType(c.options)
-      const data = encodeSetAddr(node, c.args.address, coinType)
+      // ENSIP-9: non-EVM coin types accept arbitrary byte payloads, not Ethereum addresses
+      const validatedAddress =
+        coinType == null || coinType === 60
+          ? validateAddress(c.args.address)
+          : validateHex(c.args.address)
+      const data = encodeSetAddr(node, validatedAddress, coinType)
       return { to: resolverAddress, data, value: '0' }
     },
   })

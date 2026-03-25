@@ -2,7 +2,7 @@ import { Cli, z } from 'incur'
 import { encodeFunctionData, toHex } from 'viem'
 import { ethRegistrarControllerAbi, addresses } from '../lib/contracts.ts'
 import { globalOptions, globalEnv, clientFromContext } from '../lib/context.ts'
-import { extractLabel } from '../lib/utils.ts'
+import { extractLabel, validateAddress, validateWeiValue, validateBytes32 } from '../lib/utils.ts'
 
 const ONE_YEAR = 31536000n
 const ZERO_BYTES32 = '0x0000000000000000000000000000000000000000000000000000000000000000' as const
@@ -74,10 +74,10 @@ export const registerCommands = Cli.create('register', {
       const { client, chain } = clientFromContext(c as any)
       const controllerAddress = addresses[chain].controller
       const label = extractLabel(c.args.name)
-      const owner = c.args.owner as `0x${string}`
+      const owner = validateAddress(c.args.owner)
       const duration = c.options.duration ?? ONE_YEAR
-      const secret = (c.options.secret ?? generateSecret()) as `0x${string}`
-      const resolver = (c.options.resolver ?? addresses[chain].resolver) as `0x${string}`
+      const secret = validateBytes32(c.options.secret ?? generateSecret())
+      const resolver = validateAddress(c.options.resolver ?? addresses[chain].resolver)
       const reverseRecord = c.options.reverseRecord ?? false
 
       const registration = buildRegistration({
@@ -148,10 +148,10 @@ export const registerCommands = Cli.create('register', {
       const { chain } = clientFromContext(c as any)
       const controllerAddress = addresses[chain].controller
       const label = extractLabel(c.args.name)
-      const owner = c.args.owner as `0x${string}`
+      const owner = validateAddress(c.args.owner)
       const duration = c.options.duration ?? ONE_YEAR
-      const secret = c.options.secret as `0x${string}`
-      const resolver = (c.options.resolver ?? addresses[chain].resolver) as `0x${string}`
+      const secret = validateBytes32(c.options.secret)
+      const resolver = validateAddress(c.options.resolver ?? addresses[chain].resolver)
       const reverseRecord = c.options.reverseRecord ?? false
 
       const registration = buildRegistration({
@@ -172,7 +172,7 @@ export const registerCommands = Cli.create('register', {
       return {
         to: controllerAddress,
         data,
-        value: c.options.value,
+        value: validateWeiValue(c.options.value),
         name: c.args.name,
         label,
         owner,

@@ -1,5 +1,5 @@
 import { z } from 'incur'
-import { validateName } from '../lib/utils.ts'
+import { validateName, validateAddress } from '../lib/utils.ts'
 import { getEnsAddress, getEnsName, getEnsText, getEnsAvatar } from 'viem/ens'
 import { globalOptions, globalEnv, clientFromContext } from '../lib/context.ts'
 import { resolveCoinType } from '../lib/cointype.ts'
@@ -48,7 +48,7 @@ export const reverseCommand = {
   alias: { coinType: 'c', chainId: 'i' },
   async run(c: any) {
     const { client } = clientFromContext(c)
-    const address = c.args.address as `0x${string}`
+    const address = validateAddress(c.args.address)
     const coinType = resolveCoinType(c.options)
     const name = await getEnsName(client, {
       address,
