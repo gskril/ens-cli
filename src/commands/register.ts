@@ -1,12 +1,11 @@
 import { Cli, z } from 'incur'
 import { encodeFunctionData, toHex } from 'viem'
-import { ethRegistrarControllerAbi, addresses, type Chain } from '../lib/contracts.ts'
-import type { createEnsClient } from '../lib/client.ts'
-
-type Client = ReturnType<typeof createEnsClient>
+import { ethRegistrarControllerAbi, addresses } from '../lib/contracts.ts'
+import { globalOptions, globalEnv, clientFromContext } from '../lib/context.ts'
 
 const ONE_YEAR = 31536000n
-const ZERO_BYTES32 = '0x0000000000000000000000000000000000000000000000000000000000000000' as const
+const ZERO_BYTES32 =
+  '0x0000000000000000000000000000000000000000000000000000000000000000' as const
 
 function extractLabel(name: string): string {
   return name.replace(/\.eth$/, '')
@@ -49,18 +48,18 @@ function buildRegistration(opts: {
   }
 }
 
-export function registerCommands(getClient: () => Client, getChain: () => Chain) {
-  return Cli.create('register', {
-    description: 'ENS name registration (commit/reveal flow)',
-  })
-    .command('commit', {
-      description:
-        'Generate the commitment transaction for registering an ENS name. Returns calldata JSON and a secret that MUST be saved for the reveal step. Wait at least 60 seconds after the commit transaction is mined before calling reveal.',
-      args: z.object({
-        name: z.string().describe('ENS name to register (e.g. myname.eth)'),
-        owner: z.string().describe('Address that will own the name'),
-      }),
-      options: z.object({
+export const registerCommands = Cli.create('register', {
+  description: 'ENS name registration (commit/reveal flow)',
+})
+  .command('commit', {
+    description:
+      'Generate the commitment transaction for registering an ENS name. Returns calldata JSON and a secret that MUST be saved for the reveal step. Wait at least 60 seconds after the commit transaction is mined before calling reveal.',
+    args: z.object({
+      name: z.string().describe('ENS name to register (e.g. myname.eth)'),
+      owner: z.string().describe('Address that will own the name'),
+    }),
+    options: globalOptions.merge(
+      z.object({
         duration: z.coerce
           .bigint()
           .optional()
@@ -72,63 +71,65 @@ export function registerCommands(getClient: () => Client, getChain: () => Chain)
           .describe('Resolver address (defaults to chain public resolver)'),
         reverseRecord: z.boolean().optional().describe('Set reverse record (default: false)'),
       }),
-      alias: { duration: 'd', secret: 's', resolver: 'r' },
-      async run(c) {
-        const client = getClient()
-        const chain = getChain()
-        const controllerAddress = addresses[chain].controller
-        const label = extractLabel(c.args.name)
-        const owner = c.args.owner as `0x${string}`
-        const duration = c.options.duration ?? ONE_YEAR
-        const secret = (c.options.secret ?? generateSecret()) as `0x${string}`
-        const resolver = (c.options.resolver ?? addresses[chain].resolver) as `0x${string}`
-        const reverseRecord = c.options.reverseRecord ?? false
+    ),
+    env: globalEnv,
+    alias: { duration: 'd', secret: 's', resolver: 'r' },
+    async run(c) {
+      const { client, chain } = clientFromContext(c as any)
+      const controllerAddress = addresses[chain].controller
+      const label = extractLabel(c.args.name)
+      const owner = c.args.owner as `0x${string}`
+      const duration = c.options.duration ?? ONE_YEAR
+      const secret = (c.options.secret ?? generateSecret()) as `0x${string}`
+      const resolver = (c.options.resolver ?? addresses[chain].resolver) as `0x${string}`
+      const reverseRecord = c.options.reverseRecord ?? false
 
-        const registration = buildRegistration({
-          label,
-          owner,
-          duration,
-          secret,
-          resolver,
-          reverseRecord,
-        })
+      const registration = buildRegistration({
+        label,
+        owner,
+        duration,
+        secret,
+        resolver,
+        reverseRecord,
+      })
 
-        const commitment = await client.readContract({
-          address: controllerAddress,
-          abi: ethRegistrarControllerAbi,
-          functionName: 'makeCommitment',
-          args: [registration],
-        })
+      const commitment = await client.readContract({
+        address: controllerAddress,
+        abi: ethRegistrarControllerAbi,
+        functionName: 'makeCommitment',
+        args: [registration],
+      })
 
-        const data = encodeFunctionData({
-          abi: ethRegistrarControllerAbi,
-          functionName: 'commit',
-          args: [commitment],
-        })
+      const data = encodeFunctionData({
+        abi: ethRegistrarControllerAbi,
+        functionName: 'commit',
+        args: [commitment],
+      })
 
-        return {
-          to: controllerAddress,
-          data,
-          value: '0',
-          secret,
-          commitment,
-          name: c.args.name,
-          label,
-          owner,
-          duration: duration.toString(),
-          resolver,
-          reverseRecord,
-        }
-      },
-    })
-    .command('reveal', {
-      description:
-        'Generate the registration transaction to reveal a committed ENS name. Requires the secret from the commit step and a value (in wei) from the price command.',
-      args: z.object({
-        name: z.string().describe('ENS name to register (e.g. myname.eth)'),
-        owner: z.string().describe('Address that will own the name'),
-      }),
-      options: z.object({
+      return {
+        to: controllerAddress,
+        data,
+        value: '0',
+        secret,
+        commitment,
+        name: c.args.name,
+        label,
+        owner,
+        duration: duration.toString(),
+        resolver,
+        reverseRecord,
+      }
+    },
+  })
+  .command('reveal', {
+    description:
+      'Generate the registration transaction to reveal a committed ENS name. Requires the secret from the commit step and a value (in wei) from the price command.',
+    args: z.object({
+      name: z.string().describe('ENS name to register (e.g. myname.eth)'),
+      owner: z.string().describe('Address that will own the name'),
+    }),
+    options: globalOptions.merge(
+      z.object({
         secret: z.string().describe('Secret from the commit step (required)'),
         value: z.string().describe('ETH value in wei to send (get from ens price)'),
         duration: z.coerce
@@ -138,41 +139,42 @@ export function registerCommands(getClient: () => Client, getChain: () => Chain)
         resolver: z.string().optional().describe('Resolver address (must match commit)'),
         reverseRecord: z.boolean().optional().describe('Set reverse record (must match commit)'),
       }),
-      alias: { duration: 'd', secret: 's', resolver: 'r', value: 'v' },
-      async run(c) {
-        const chain = getChain()
-        const controllerAddress = addresses[chain].controller
-        const label = extractLabel(c.args.name)
-        const owner = c.args.owner as `0x${string}`
-        const duration = c.options.duration ?? ONE_YEAR
-        const secret = c.options.secret as `0x${string}`
-        const resolver = (c.options.resolver ?? addresses[chain].resolver) as `0x${string}`
-        const reverseRecord = c.options.reverseRecord ?? false
+    ),
+    env: globalEnv,
+    alias: { duration: 'd', secret: 's', resolver: 'r', value: 'v' },
+    async run(c) {
+      const { chain } = clientFromContext(c as any)
+      const controllerAddress = addresses[chain].controller
+      const label = extractLabel(c.args.name)
+      const owner = c.args.owner as `0x${string}`
+      const duration = c.options.duration ?? ONE_YEAR
+      const secret = c.options.secret as `0x${string}`
+      const resolver = (c.options.resolver ?? addresses[chain].resolver) as `0x${string}`
+      const reverseRecord = c.options.reverseRecord ?? false
 
-        const registration = buildRegistration({
-          label,
-          owner,
-          duration,
-          secret,
-          resolver,
-          reverseRecord,
-        })
+      const registration = buildRegistration({
+        label,
+        owner,
+        duration,
+        secret,
+        resolver,
+        reverseRecord,
+      })
 
-        const data = encodeFunctionData({
-          abi: ethRegistrarControllerAbi,
-          functionName: 'register',
-          args: [registration],
-        })
+      const data = encodeFunctionData({
+        abi: ethRegistrarControllerAbi,
+        functionName: 'register',
+        args: [registration],
+      })
 
-        return {
-          to: controllerAddress,
-          data,
-          value: c.options.value,
-          name: c.args.name,
-          label,
-          owner,
-          duration: duration.toString(),
-        }
-      },
-    })
-}
+      return {
+        to: controllerAddress,
+        data,
+        value: c.options.value,
+        name: c.args.name,
+        label,
+        owner,
+        duration: duration.toString(),
+      }
+    },
+  })

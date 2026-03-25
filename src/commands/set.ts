@@ -1,7 +1,8 @@
 import { Cli, z } from 'incur'
 import { encodeFunctionData } from 'viem'
 import { namehash, normalize } from 'viem/ens'
-import { publicResolverAbi, addresses, type Chain } from '../lib/contracts.ts'
+import { publicResolverAbi, addresses } from '../lib/contracts.ts'
+import { globalOptions, globalEnv, clientFromContext } from '../lib/context.ts'
 import { resolveCoinType } from '../lib/cointype.ts'
 
 type BatchOperation =
@@ -51,17 +52,17 @@ function encodeBatchOperation(node: `0x${string}`, op: BatchOperation): `0x${str
   }
 }
 
-export function setCommands(getChain: () => Chain) {
-  return Cli.create('set', {
-    description: 'Set ENS records (outputs calldata JSON)',
-  })
-    .command('address', {
-      description: 'Generate calldata to set the address record for an ENS name',
-      args: z.object({
-        name: z.string().describe('ENS name (e.g. myname.eth)'),
-        address: z.string().describe('Address to set'),
-      }),
-      options: z.object({
+export const setCommands = Cli.create('set', {
+  description: 'Set ENS records (outputs calldata JSON)',
+})
+  .command('address', {
+    description: 'Generate calldata to set the address record for an ENS name',
+    args: z.object({
+      name: z.string().describe('ENS name (e.g. myname.eth)'),
+      address: z.string().describe('Address to set'),
+    }),
+    options: globalOptions.merge(
+      z.object({
         coinType: z.coerce
           .number()
           .optional()
@@ -71,72 +72,80 @@ export function setCommands(getChain: () => Chain) {
           .optional()
           .describe('EVM chain ID — auto-converts to ENSIP-9 coin type (e.g. 10 for Optimism)'),
       }),
-      alias: { coinType: 'c', chainId: 'i' },
-      async run(c) {
-        const chain = getChain()
-        const resolverAddress = addresses[chain].resolver
-        const node = namehash(normalize(c.args.name))
-        const coinType = resolveCoinType(c.options)
-        const data = encodeSetAddr(node, c.args.address, coinType)
-        return { to: resolverAddress, data, value: '0' }
-      },
-    })
-    .command('text', {
-      description: 'Generate calldata to set a text record for an ENS name',
-      args: z.object({
-        name: z.string().describe('ENS name (e.g. myname.eth)'),
-        key: z.string().describe('Text record key (e.g. com.twitter, url)'),
-        value: z.string().describe('Text record value'),
-      }),
-      async run(c) {
-        const chain = getChain()
-        const resolverAddress = addresses[chain].resolver
-        const node = namehash(normalize(c.args.name))
-        const data = encodeSetText(node, c.args.key, c.args.value)
-        return { to: resolverAddress, data, value: '0' }
-      },
-    })
-    .command('contenthash', {
-      description: 'Generate calldata to set the content hash for an ENS name',
-      args: z.object({
-        name: z.string().describe('ENS name (e.g. myname.eth)'),
-        hash: z.string().describe('Content hash in hex (EIP-1577 encoded)'),
-      }),
-      async run(c) {
-        const chain = getChain()
-        const resolverAddress = addresses[chain].resolver
-        const node = namehash(normalize(c.args.name))
-        const data = encodeSetContenthash(node, c.args.hash)
-        return { to: resolverAddress, data, value: '0' }
-      },
-    })
-    .command('batch', {
-      description:
-        'Generate multicall calldata to set multiple records in a single transaction. Pass a JSON array of operations.',
-      args: z.object({
-        name: z.string().describe('ENS name (e.g. myname.eth)'),
-      }),
-      options: z.object({
+    ),
+    env: globalEnv,
+    alias: { coinType: 'c', chainId: 'i' },
+    async run(c) {
+      const { chain } = clientFromContext(c as any)
+      const resolverAddress = addresses[chain].resolver
+      const node = namehash(normalize(c.args.name))
+      const coinType = resolveCoinType(c.options)
+      const data = encodeSetAddr(node, c.args.address, coinType)
+      return { to: resolverAddress, data, value: '0' }
+    },
+  })
+  .command('text', {
+    description: 'Generate calldata to set a text record for an ENS name',
+    args: z.object({
+      name: z.string().describe('ENS name (e.g. myname.eth)'),
+      key: z.string().describe('Text record key (e.g. com.twitter, url)'),
+      value: z.string().describe('Text record value'),
+    }),
+    options: globalOptions,
+    env: globalEnv,
+    async run(c) {
+      const { chain } = clientFromContext(c as any)
+      const resolverAddress = addresses[chain].resolver
+      const node = namehash(normalize(c.args.name))
+      const data = encodeSetText(node, c.args.key, c.args.value)
+      return { to: resolverAddress, data, value: '0' }
+    },
+  })
+  .command('contenthash', {
+    description: 'Generate calldata to set the content hash for an ENS name',
+    args: z.object({
+      name: z.string().describe('ENS name (e.g. myname.eth)'),
+      hash: z.string().describe('Content hash in hex (EIP-1577 encoded)'),
+    }),
+    options: globalOptions,
+    env: globalEnv,
+    async run(c) {
+      const { chain } = clientFromContext(c as any)
+      const resolverAddress = addresses[chain].resolver
+      const node = namehash(normalize(c.args.name))
+      const data = encodeSetContenthash(node, c.args.hash)
+      return { to: resolverAddress, data, value: '0' }
+    },
+  })
+  .command('batch', {
+    description:
+      'Generate multicall calldata to set multiple records in a single transaction. Pass a JSON array of operations.',
+    args: z.object({
+      name: z.string().describe('ENS name (e.g. myname.eth)'),
+    }),
+    options: globalOptions.merge(
+      z.object({
         data: z
           .string()
           .describe(
             'JSON array of operations: [{"type":"text","key":"url","value":"https://..."},{"type":"address","address":"0x...","chainId":10},{"type":"address","address":"0x...","coinType":0},{"type":"contenthash","hash":"0x..."}]',
           ),
       }),
-      async run(c) {
-        const chain = getChain()
-        const resolverAddress = addresses[chain].resolver
-        const node = namehash(normalize(c.args.name))
-        const operations: BatchOperation[] = JSON.parse(c.options.data)
-        const calls = operations.map((op) => encodeBatchOperation(node, op))
+    ),
+    env: globalEnv,
+    async run(c) {
+      const { chain } = clientFromContext(c as any)
+      const resolverAddress = addresses[chain].resolver
+      const node = namehash(normalize(c.args.name))
+      const operations: BatchOperation[] = JSON.parse(c.options.data)
+      const calls = operations.map((op) => encodeBatchOperation(node, op))
 
-        const data = encodeFunctionData({
-          abi: publicResolverAbi,
-          functionName: 'multicall',
-          args: [calls],
-        })
+      const data = encodeFunctionData({
+        abi: publicResolverAbi,
+        functionName: 'multicall',
+        args: [calls],
+      })
 
-        return { to: resolverAddress, data, value: '0' }
-      },
-    })
-}
+      return { to: resolverAddress, data, value: '0' }
+    },
+  })
