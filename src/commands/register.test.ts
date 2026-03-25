@@ -179,20 +179,14 @@ describe('ABI encoding correctness', () => {
 
   test('makeCommitment ABI components have expected names and types', () => {
     const components = makeCommitmentAbi.inputs[0].components
-    const expected = [
-      { name: 'label', type: 'string' },
-      { name: 'owner', type: 'address' },
-      { name: 'duration', type: 'uint256' },
-      { name: 'secret', type: 'bytes32' },
-      { name: 'resolver', type: 'address' },
-      { name: 'data', type: 'bytes[]' },
-      { name: 'reverseRecord', type: 'uint8' },
-      { name: 'referrer', type: 'bytes32' },
-    ]
-    for (let i = 0; i < expected.length; i++) {
-      expect(components[i].name).toBe(expected[i].name)
-      expect(components[i].type).toBe(expected[i].type)
-    }
+    expect(components[0]).toMatchObject({ name: 'label', type: 'string' })
+    expect(components[1]).toMatchObject({ name: 'owner', type: 'address' })
+    expect(components[2]).toMatchObject({ name: 'duration', type: 'uint256' })
+    expect(components[3]).toMatchObject({ name: 'secret', type: 'bytes32' })
+    expect(components[4]).toMatchObject({ name: 'resolver', type: 'address' })
+    expect(components[5]).toMatchObject({ name: 'data', type: 'bytes[]' })
+    expect(components[6]).toMatchObject({ name: 'reverseRecord', type: 'uint8' })
+    expect(components[7]).toMatchObject({ name: 'referrer', type: 'bytes32' })
   })
 
   test('encodeAbiParameters does not throw for valid registration tuple', () => {
