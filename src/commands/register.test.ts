@@ -41,9 +41,9 @@ function buildRegistration(opts: {
   }
 }
 
-// Resolve the makeCommitment ABI entry once for all tests
+// Resolve the makeCommitment ABI entry once for all tests (same filter as production)
 const makeCommitmentAbi = ethRegistrarControllerAbi.find(
-  (x) => x.name === 'makeCommitment',
+  (x) => x.type === 'function' && x.name === 'makeCommitment',
 )!
 
 function computeCommitment(registration: Registration): `0x${string}` {
