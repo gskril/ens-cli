@@ -2,9 +2,10 @@ import { Cli, z } from 'incur'
 import { encodeFunctionData } from 'viem'
 import { namehash, normalize } from 'viem/ens'
 import { publicResolverAbi, addresses, type Chain } from '../lib/contracts.ts'
+import { resolveCoinType } from '../lib/cointype.ts'
 
 type BatchOperation =
-  | { type: 'address'; address: string; coinType?: number }
+  | { type: 'address'; address: string; coinType?: number; chainId?: number }
   | { type: 'text'; key: string; value: string }
   | { type: 'contenthash'; hash: string }
 
@@ -42,7 +43,7 @@ function encodeSetContenthash(node: `0x${string}`, hash: string): `0x${string}` 
 function encodeBatchOperation(node: `0x${string}`, op: BatchOperation): `0x${string}` {
   switch (op.type) {
     case 'address':
-      return encodeSetAddr(node, op.address, op.coinType)
+      return encodeSetAddr(node, op.address, resolveCoinType(op))
     case 'text':
       return encodeSetText(node, op.key, op.value)
     case 'contenthash':
@@ -61,14 +62,22 @@ export function setCommands(getChain: () => Chain) {
         address: z.string().describe('Address to set'),
       }),
       options: z.object({
-        coinType: z.coerce.number().optional().describe('ENSIP-9 coin type (default: ETH)'),
+        coinType: z.coerce
+          .number()
+          .optional()
+          .describe('ENSIP-9 coin type (e.g. 0 for BTC, 60 for ETH)'),
+        chainId: z.coerce
+          .number()
+          .optional()
+          .describe('EVM chain ID — auto-converts to ENSIP-9 coin type (e.g. 10 for Optimism)'),
       }),
-      alias: { coinType: 'c' },
+      alias: { coinType: 'c', chainId: 'i' },
       async run(c) {
         const chain = getChain()
         const resolverAddress = addresses[chain].resolver
         const node = namehash(normalize(c.args.name))
-        const data = encodeSetAddr(node, c.args.address, c.options.coinType)
+        const coinType = resolveCoinType(c.options)
+        const data = encodeSetAddr(node, c.args.address, coinType)
         return { to: resolverAddress, data, value: '0' }
       },
     })
@@ -111,7 +120,7 @@ export function setCommands(getChain: () => Chain) {
         data: z
           .string()
           .describe(
-            'JSON array of operations: [{"type":"text","key":"url","value":"https://..."},{"type":"address","address":"0x...","coinType":60},{"type":"contenthash","hash":"0x..."}]',
+            'JSON array of operations: [{"type":"text","key":"url","value":"https://..."},{"type":"address","address":"0x...","chainId":10},{"type":"address","address":"0x...","coinType":0},{"type":"contenthash","hash":"0x..."}]',
           ),
       }),
       async run(c) {

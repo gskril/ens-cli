@@ -2,8 +2,20 @@ import { z } from 'incur'
 import { normalize } from 'viem/ens'
 import { getEnsAddress, getEnsName, getEnsText, getEnsAvatar } from 'viem/ens'
 import type { createEnsClient } from '../lib/client.ts'
+import { resolveCoinType } from '../lib/cointype.ts'
 
 type Client = ReturnType<typeof createEnsClient>
+
+const coinTypeOptions = z.object({
+  coinType: z.coerce
+    .number()
+    .optional()
+    .describe('ENSIP-9 coin type (e.g. 0 for BTC, 60 for ETH)'),
+  chainId: z.coerce
+    .number()
+    .optional()
+    .describe('EVM chain ID — auto-converts to ENSIP-9 coin type (e.g. 10 for Optimism)'),
+})
 
 export function resolveCommand(getClient: () => Client) {
   return {
@@ -11,21 +23,20 @@ export function resolveCommand(getClient: () => Client) {
     args: z.object({
       name: z.string().describe('ENS name to resolve (e.g. vitalik.eth)'),
     }),
-    options: z.object({
-      coinType: z.coerce.number().optional().describe('ENSIP-9 coin type (default: 60 for ETH)'),
-    }),
-    alias: { coinType: 'c' },
+    options: coinTypeOptions,
+    alias: { coinType: 'c', chainId: 'i' },
     async run(c: any) {
       const client = getClient()
       const name = normalize(c.args.name)
+      const coinType = resolveCoinType(c.options)
       const address = await getEnsAddress(client, {
         name,
-        ...(c.options.coinType != null ? { coinType: c.options.coinType } : {}),
+        ...(coinType != null ? { coinType } : {}),
       })
       return {
         name,
         address,
-        ...(c.options.coinType != null ? { coinType: c.options.coinType } : {}),
+        ...(coinType != null ? { coinType } : {}),
       }
     },
   }
@@ -37,21 +48,20 @@ export function reverseCommand(getClient: () => Client) {
     args: z.object({
       address: z.string().describe('Ethereum address to reverse resolve'),
     }),
-    options: z.object({
-      coinType: z.coerce.number().optional().describe('ENSIP-9 coin type (default: 60 for ETH)'),
-    }),
-    alias: { coinType: 'c' },
+    options: coinTypeOptions,
+    alias: { coinType: 'c', chainId: 'i' },
     async run(c: any) {
       const client = getClient()
       const address = c.args.address as `0x${string}`
+      const coinType = resolveCoinType(c.options)
       const name = await getEnsName(client, {
         address,
-        ...(c.options.coinType != null ? { coinType: c.options.coinType } : {}),
+        ...(coinType != null ? { coinType } : {}),
       })
       return {
         address,
         name,
-        ...(c.options.coinType != null ? { coinType: c.options.coinType } : {}),
+        ...(coinType != null ? { coinType } : {}),
       }
     },
   }
