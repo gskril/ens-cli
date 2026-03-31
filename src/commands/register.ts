@@ -117,8 +117,8 @@ export const registerCommands = Cli.create('register', {
         nextSteps: [
           '1. Broadcast this commit transaction',
           '2. Wait at least 60 seconds after the tx is mined',
-          `3. Run: ens price ${c.args.name} -- to get the required value`,
-          `4. Run: ens register reveal ${c.args.name} ${c.args.owner} --secret ${secret} --value <total from price>`,
+          `3. Run: ens price ${c.args.name} -- IMPORTANT: fetch price immediately before reveal, not earlier, because the required ETH amount changes with the ETH/USD price`,
+          `4. Run: ens register reveal ${c.args.name} ${c.args.owner} --secret ${secret} --value <bufferedTotal from price>`,
         ],
       }
     },
@@ -133,7 +133,7 @@ export const registerCommands = Cli.create('register', {
     options: globalOptions.merge(
       z.object({
         secret: z.string().describe('Secret from the commit step (required)'),
-        value: z.string().describe('ETH value in wei to send (get from ens price)'),
+        value: z.string().describe('ETH value in wei to send (use bufferedTotal from ens price, fetched immediately before this step)'),
         duration: z.coerce
           .bigint()
           .optional()

@@ -8,7 +8,7 @@ const ONE_YEAR = 31536000n
 
 export const priceCommand = {
   description:
-    'Check the registration or renewal cost for an ENS name. Run this before register or renew to determine the value to send.',
+    'Check the registration or renewal cost for an ENS name. Returns a bufferedTotal (with 5% buffer) to use as the transaction value. IMPORTANT: Always fetch price immediately before sending the register/renew transaction, not earlier, because ENS prices are denominated in USD but paid in ETH, so the required ETH amount changes with the ETH/USD price.',
   args: z.object({
     name: z.string().describe('ENS name to price (e.g. myname.eth)'),
   }),
@@ -33,6 +33,7 @@ export const priceCommand = {
       args: [label, duration],
     })
     const total = price.base + price.premium
+    const buffered = total + total / 20n // 5% buffer for ETH price changes
     return {
       name: c.args.name,
       label,
@@ -41,6 +42,9 @@ export const priceCommand = {
       premium: price.premium.toString(),
       total: total.toString(),
       totalEth: formatEther(total),
+      bufferedTotal: buffered.toString(),
+      bufferedTotalEth: formatEther(buffered),
+      note: 'bufferedTotal includes a 5% buffer to account for ETH price fluctuations. Use bufferedTotal as the value for register/renew transactions. Any excess ETH is refunded by the contract.',
     }
   },
 }
