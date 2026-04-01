@@ -16,8 +16,5 @@
     "incur": "^0.3.13",
     "prettier": "^3.8.1",
     "viem": "^2.47.6"
-  },
-  "peerDependencies": {
-    "typescript": "^5"
   }
 }
