@@ -5,6 +5,7 @@ import type { Chain } from './contracts.ts'
 export const globalOptions = z.object({
   rpc: z.string().optional().describe('Ethereum RPC URL'),
   chain: z.enum(['mainnet', 'sepolia']).default('mainnet').describe('Chain to use'),
+  universalResolver: z.string().optional().describe('Custom Universal Resolver contract address'),
 })
 
 export const globalEnv = z.object({

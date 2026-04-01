@@ -133,7 +133,11 @@ export const registerCommands = Cli.create('register', {
     options: globalOptions.merge(
       z.object({
         secret: z.string().describe('Secret from the commit step (required)'),
-        value: z.string().describe('ETH value in wei to send (use bufferedTotal from ens price, fetched immediately before this step)'),
+        value: z
+          .string()
+          .describe(
+            'ETH value in wei to send (use bufferedTotal from ens price, fetched immediately before this step)',
+          ),
         duration: z.coerce
           .bigint()
           .optional()

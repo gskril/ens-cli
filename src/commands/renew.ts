@@ -15,7 +15,11 @@ export const renewCommand = {
   }),
   options: globalOptions.merge(
     z.object({
-      value: z.string().describe('ETH value in wei to send (use bufferedTotal from ens price, fetched immediately before this step)'),
+      value: z
+        .string()
+        .describe(
+          'ETH value in wei to send (use bufferedTotal from ens price, fetched immediately before this step)',
+        ),
       duration: z.coerce
         .bigint()
         .optional()

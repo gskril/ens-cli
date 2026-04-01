@@ -26,9 +26,11 @@ export const resolveCommand = {
     const { client } = clientFromContext(c)
     const name = validateName(c.args.name)
     const coinType = resolveCoinType(c.options)
+    const universalResolverAddress = c.options.universalResolver as `0x${string}` | undefined
     const address = await getEnsAddress(client, {
       name,
-      ...(coinType != null ? { coinType } : {}),
+      ...(coinType != null ? { coinType: BigInt(coinType) } : {}),
+      ...(universalResolverAddress ? { universalResolverAddress } : {}),
     })
     return {
       name,
@@ -50,9 +52,11 @@ export const reverseCommand = {
     const { client } = clientFromContext(c)
     const address = c.args.address as `0x${string}`
     const coinType = resolveCoinType(c.options)
+    const universalResolverAddress = c.options.universalResolver as `0x${string}` | undefined
     const name = await getEnsName(client, {
       address,
-      ...(coinType != null ? { coinType } : {}),
+      ...(coinType != null ? { coinType: BigInt(coinType) } : {}),
+      ...(universalResolverAddress ? { universalResolverAddress } : {}),
     })
     return {
       address,
@@ -73,7 +77,12 @@ export const textCommand = {
   async run(c: any) {
     const { client } = clientFromContext(c)
     const name = validateName(c.args.name)
-    const value = await getEnsText(client, { name, key: c.args.key })
+    const universalResolverAddress = c.options.universalResolver as `0x${string}` | undefined
+    const value = await getEnsText(client, {
+      name,
+      key: c.args.key,
+      ...(universalResolverAddress ? { universalResolverAddress } : {}),
+    })
     return { name, key: c.args.key, value }
   },
 }
@@ -88,7 +97,11 @@ export const avatarCommand = {
   async run(c: any) {
     const { client } = clientFromContext(c)
     const name = validateName(c.args.name)
-    const avatar = await getEnsAvatar(client, { name })
+    const universalResolverAddress = c.options.universalResolver as `0x${string}` | undefined
+    const avatar = await getEnsAvatar(client, {
+      name,
+      ...(universalResolverAddress ? { universalResolverAddress } : {}),
+    })
     return { name, avatar }
   },
 }
