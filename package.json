@@ -10,15 +10,14 @@
     "build": "bun build src/index.ts --outfile dist/ens.mjs --target node --minify",
     "format": "prettier --write ."
   },
+  "files": ["dist"],
   "devDependencies": {
     "@types/bun": "latest",
-    "prettier": "^3.8.1"
+    "incur": "^0.3.13",
+    "prettier": "^3.8.1",
+    "viem": "^2.47.6"
   },
   "peerDependencies": {
     "typescript": "^5"
-  },
-  "dependencies": {
-    "incur": "^0.3.13",
-    "viem": "^2.47.6"
   }
 }
