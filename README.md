@@ -9,6 +9,20 @@ The CLI handles two categories of operations:
 
 Built with [Incur](https://github.com/wevm/incur) for agent-native features (MCP server mode, skills, token-efficient output) and [viem](https://viem.sh) for ENS resolution with full CCIP-read support.
 
+## Install preview build
+
+```sh
+alias ens='npx "https://pkg.pr.new/gskril/ens-cli/@ensdomains/cli@COMMIT_HASH"'
+```
+
+Replace `COMMIT_HASH` with a recent commit hash. This creates a temporary `ens` alias for the current shell session. To make it permanent, add the line to your `~/.zshrc` or `~/.bashrc`.
+
+To update to a newer commit, change the hash in the alias. To remove stale versions, clear your npx cache:
+
+```sh
+npx clear-npx-cache
+```
+
 ## Commands
 
 ### Resolution

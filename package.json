@@ -4,9 +4,10 @@
   "module": "src/index.ts",
   "type": "module",
   "bin": {
-    "ens": "src/index.ts"
+    "ens": "dist/ens.mjs"
   },
   "scripts": {
+    "build": "bun build src/index.ts --outfile dist/ens.mjs --target node --minify",
     "format": "prettier --write ."
   },
   "devDependencies": {
