@@ -16,6 +16,8 @@ jobs:
 
       - run: bun install
 
+      - run: bun run typecheck
+
       - run: bun run build
 
       - run: bunx pkg-pr-new publish --bin
