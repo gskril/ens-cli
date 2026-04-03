@@ -21,7 +21,7 @@ export const renewCommand = {
           'ETH value in wei to send (use bufferedTotal from ens price, fetched immediately before this step)',
         ),
       duration: z.coerce
-        .bigint()
+        .number()
         .optional()
         .describe('Renewal duration in seconds (default: 31536000 = 1 year)'),
     }),
@@ -32,7 +32,7 @@ export const renewCommand = {
     const { chain } = clientFromContext(c)
     const controllerAddress = addresses[chain].controller
     const label = extractLabel(c.args.name)
-    const duration = c.options.duration ?? ONE_YEAR
+    const duration = c.options.duration != null ? BigInt(c.options.duration) : ONE_YEAR
 
     const data = encodeFunctionData({
       abi: ethRegistrarControllerAbi,

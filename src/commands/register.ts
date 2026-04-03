@@ -57,7 +57,7 @@ export const registerCommands = Cli.create('register', {
     options: globalOptions.merge(
       z.object({
         duration: z.coerce
-          .bigint()
+          .number()
           .optional()
           .describe('Registration duration in seconds (default: 31536000 = 1 year)'),
         secret: z.string().optional().describe('Secret bytes32 hex (auto-generated if omitted)'),
@@ -75,7 +75,7 @@ export const registerCommands = Cli.create('register', {
       const controllerAddress = addresses[chain].controller
       const label = extractLabel(c.args.name)
       const owner = c.args.owner as `0x${string}`
-      const duration = c.options.duration ?? ONE_YEAR
+      const duration = c.options.duration != null ? BigInt(c.options.duration) : ONE_YEAR
       const secret = (c.options.secret ?? generateSecret()) as `0x${string}`
       const resolver = (c.options.resolver ?? addresses[chain].resolver) as `0x${string}`
       const reverseRecord = c.options.reverseRecord ?? false
@@ -139,7 +139,7 @@ export const registerCommands = Cli.create('register', {
             'ETH value in wei to send (use bufferedTotal from ens price, fetched immediately before this step)',
           ),
         duration: z.coerce
-          .bigint()
+          .number()
           .optional()
           .describe('Registration duration in seconds (must match commit)'),
         resolver: z.string().optional().describe('Resolver address (must match commit)'),
@@ -153,7 +153,7 @@ export const registerCommands = Cli.create('register', {
       const controllerAddress = addresses[chain].controller
       const label = extractLabel(c.args.name)
       const owner = c.args.owner as `0x${string}`
-      const duration = c.options.duration ?? ONE_YEAR
+      const duration = c.options.duration != null ? BigInt(c.options.duration) : ONE_YEAR
       const secret = c.options.secret as `0x${string}`
       const resolver = (c.options.resolver ?? addresses[chain].resolver) as `0x${string}`
       const reverseRecord = c.options.reverseRecord ?? false

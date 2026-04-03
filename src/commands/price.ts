@@ -15,7 +15,7 @@ export const priceCommand = {
   options: globalOptions.merge(
     z.object({
       duration: z.coerce
-        .bigint()
+        .number()
         .optional()
         .describe('Registration duration in seconds (default: 31536000 = 1 year)'),
     }),
@@ -25,7 +25,7 @@ export const priceCommand = {
   async run(c: any) {
     const { client, chain } = clientFromContext(c)
     const label = extractLabel(c.args.name)
-    const duration = c.options.duration ?? ONE_YEAR
+    const duration = c.options.duration != null ? BigInt(c.options.duration) : ONE_YEAR
     const price = await client.readContract({
       address: addresses[chain].controller,
       abi: ethRegistrarControllerAbi,
