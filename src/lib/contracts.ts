@@ -1,3 +1,5 @@
+import { parseAbi } from 'viem'
+
 export const ethRegistrarControllerAbi = [
   {
     name: 'commit',
@@ -141,12 +143,18 @@ export const publicResolverAbi = [
   },
 ] as const
 
+export const baseRegistrarAbi = parseAbi([
+  'function controllers(address) external view returns (bool)',
+])
+
 export const addresses = {
   mainnet: {
+    baseRegistrar: '0x57f1887a8BF19b14fC0dF6Fd9B2acc9Af147eA85' as const,
     controller: '0x59E16fcCd424Cc24e280Be16E11Bcd56fb0CE547' as const,
     resolver: '0xF29100983E058B709F3D539b0c765937B804AC15' as const,
   },
   sepolia: {
+    baseRegistrar: '0x57f1887a8BF19b14fC0dF6Fd9B2acc9Af147eA85' as const,
     controller: '0xfb3cE5D01e0f33f41DbB39035dB9745962F1f968' as const,
     resolver: '0xE99638b40E4Fff0129D56f03b55b6bbC4BBE49b5' as const,
   },

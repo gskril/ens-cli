@@ -77,7 +77,7 @@ export const setCommands = Cli.create('set', {
     env: globalEnv,
     alias: { coinType: 'c', chainId: 'i' },
     async run(c) {
-      const { chain } = clientFromContext(c as any)
+      const { chain } = clientFromContext(c)
       const resolverAddress = addresses[chain].resolver
       const node = namehash(validateName(c.args.name))
       const coinType = resolveCoinType(c.options)
@@ -95,7 +95,7 @@ export const setCommands = Cli.create('set', {
     options: globalOptions,
     env: globalEnv,
     async run(c) {
-      const { chain } = clientFromContext(c as any)
+      const { chain } = clientFromContext(c)
       const resolverAddress = addresses[chain].resolver
       const node = namehash(validateName(c.args.name))
       const data = encodeSetText(node, c.args.key, c.args.value)
@@ -111,7 +111,7 @@ export const setCommands = Cli.create('set', {
     options: globalOptions,
     env: globalEnv,
     async run(c) {
-      const { chain } = clientFromContext(c as any)
+      const { chain } = clientFromContext(c)
       const resolverAddress = addresses[chain].resolver
       const node = namehash(validateName(c.args.name))
       const data = encodeSetContenthash(node, c.args.hash)
@@ -135,7 +135,7 @@ export const setCommands = Cli.create('set', {
     ),
     env: globalEnv,
     async run(c) {
-      const { chain } = clientFromContext(c as any)
+      const { chain } = clientFromContext(c)
       const resolverAddress = addresses[chain].resolver
       const node = namehash(validateName(c.args.name))
       const operations: BatchOperation[] = JSON.parse(c.options.data)

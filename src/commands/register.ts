@@ -71,7 +71,7 @@ export const registerCommands = Cli.create('register', {
     env: globalEnv,
     alias: { duration: 'd', secret: 's', resolver: 'r' },
     async run(c) {
-      const { client, chain } = clientFromContext(c as any)
+      const { client, chain } = clientFromContext(c)
       const controllerAddress = addresses[chain].controller
       const label = extractLabel(c.args.name)
       const owner = c.args.owner as `0x${string}`
@@ -149,7 +149,7 @@ export const registerCommands = Cli.create('register', {
     env: globalEnv,
     alias: { duration: 'd', secret: 's', resolver: 'r', value: 'v' },
     async run(c) {
-      const { chain } = clientFromContext(c as any)
+      const { chain } = clientFromContext(c)
       const controllerAddress = addresses[chain].controller
       const label = extractLabel(c.args.name)
       const owner = c.args.owner as `0x${string}`
