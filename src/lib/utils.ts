@@ -4,13 +4,17 @@ export function validateName(name: string): string {
   if (!name || !name.trim()) {
     throw new Error('Name cannot be empty.')
   }
-  const normalized = normalize(name)
-  if (!normalized.includes('.')) {
-    throw new Error(
-      `Invalid ENS name: "${normalized}". Expected a fully qualified name (e.g. name.eth).`,
-    )
+  try {
+    const normalized = normalize(name)
+    if (!normalized.includes('.')) {
+      throw new Error(
+        `Invalid ENS name: "${normalized}". Expected a fully qualified name (e.g. name.eth).`,
+      )
+    }
+    return normalized
+  } catch (error) {
+    throw new Error(`Invalid ENS name: "${name}". Could not normalize name.`)
   }
-  return normalized
 }
 
 export function extractLabel(name: string): string {

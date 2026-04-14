@@ -145,18 +145,38 @@ export const publicResolverAbi = [
 
 export const baseRegistrarAbi = parseAbi([
   'function controllers(address) external view returns (bool)',
+  'function nameExpires(uint256 id) external view returns (uint256)',
+])
+
+export const ensRegistryAbi = parseAbi([
+  'function owner(bytes32 node) external view returns (address)',
+  'function resolver(bytes32 node) external view returns (address)',
+])
+
+export const universalResolverAbi = parseAbi([
+  'function supportsInterface(bytes4 interfaceId) external view returns (bool)',
+  'function findExactRegistry(bytes name) external view returns (address)',
+  'function findCanonicalRegistry(bytes name) external view returns (address)',
+])
+
+export const v2RegistryAbi = parseAbi([
+  'function getState(uint256 anyId) external view returns ((uint8 status, uint64 expiry, address latestOwner, uint256 tokenId, uint256 resource))',
 ])
 
 export const addresses = {
   mainnet: {
+    registry: '0x00000000000C2E074eC69A0dFb2997BA6C7d2e1e' as const,
     baseRegistrar: '0x57f1887a8BF19b14fC0dF6Fd9B2acc9Af147eA85' as const,
     controller: '0x59E16fcCd424Cc24e280Be16E11Bcd56fb0CE547' as const,
     resolver: '0xF29100983E058B709F3D539b0c765937B804AC15' as const,
+    universalResolver: '0xeEeEEEeE14D718C2B47D9923Deab1335E144EeEe' as const,
   },
   sepolia: {
+    registry: '0x00000000000C2E074eC69A0dFb2997BA6C7d2e1e' as const,
     baseRegistrar: '0x57f1887a8BF19b14fC0dF6Fd9B2acc9Af147eA85' as const,
     controller: '0xfb3cE5D01e0f33f41DbB39035dB9745962F1f968' as const,
     resolver: '0xE99638b40E4Fff0129D56f03b55b6bbC4BBE49b5' as const,
+    universalResolver: '0xeEeEEEeE14D718C2B47D9923Deab1335E144EeEe' as const,
   },
 } as const
 

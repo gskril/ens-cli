@@ -1,6 +1,6 @@
 import { z } from 'incur'
 import { createEnsClient } from './client.ts'
-import { addresses, baseRegistrarAbi, type Chain } from './contracts.ts'
+import { addresses, universalResolverAbi, type Chain } from './contracts.ts'
 
 export const globalOptions = z.object({
   rpc: z.string().optional().describe('Ethereum RPC URL'),
@@ -24,22 +24,20 @@ export function clientFromContext(c: Context) {
 }
 
 // Switch to help with logic around ENSv2
-// Check if the latest BaseRegistrar is active
-export async function isV2Active(c: Context) {
+// Check if the UR implements `findCanonicalRegistry()`, which only exists in v2
+export async function isV2Active(c: Context, universalResolverAddress: `0x${string}` | undefined) {
   const { client, chain } = clientFromContext(c)
 
   try {
-    const isControllerActive = await client.readContract({
-      address: addresses[chain].baseRegistrar,
-      abi: baseRegistrarAbi,
-      functionName: 'controllers',
-      args: [addresses[chain].controller],
+    const ethRegistry = await client.readContract({
+      address: universalResolverAddress ?? addresses[chain].universalResolver,
+      abi: universalResolverAbi,
+      functionName: 'findCanonicalRegistry',
+      args: ['0x0365746800'],
     })
 
-    // If the controller is active then v2 is not active, so return the opposite
-    return !isControllerActive
+    return { isV2: true, ethRegistry }
   } catch {
-    // If the v1 BaseRegistrar does not exist in a custom deployment, assume v2 is active
-    return true
+    return { isV2: false } as const
   }
 }

@@ -41,6 +41,9 @@ ens text vitalik.eth com.twitter
 
 # Get avatar URL
 ens avatar vitalik.eth
+
+# Show owner, resolver, and expiry for a .eth name
+ens whois vitalik.eth
 ```
 
 ### Availability & Pricing
@@ -186,6 +189,7 @@ src/
 │   └── contracts.ts    # ABIs and contract addresses
 └── commands/
     ├── resolve.ts      # resolve, reverse, text, avatar
+    ├── whois.ts        # owner, resolver, expiry lookup
     ├── available.ts    # Name availability check
     ├── price.ts        # Registration/renewal pricing
     ├── register.ts     # commit + reveal (nested group)
