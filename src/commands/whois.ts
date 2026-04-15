@@ -15,6 +15,12 @@ function toNullableAddress(value: `0x${string}`) {
   return value === zeroAddress ? null : value
 }
 
+const statusLabels = ['AVAILABLE', 'RESERVED', 'REGISTERED'] as const
+
+function mapStatus(status: number | bigint) {
+  return statusLabels[Number(status)] ?? 'UNKNOWN'
+}
+
 function getExpiryDetails(name: string, expiry: bigint) {
   if (expiry === 0n) return { expiry: null, expiryDate: null }
 
@@ -77,7 +83,7 @@ export const whoisCommand = {
         owner: toNullableAddress(owner),
         resolver: toNullableAddress(resolver),
         registry: ethRegistry,
-        status,
+        status: mapStatus(status),
         ...getExpiryDetails(name, expiry),
         latestOwner: toNullableAddress(latestOwner),
         tokenId,
