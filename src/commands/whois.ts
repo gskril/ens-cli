@@ -47,22 +47,33 @@ export const whoisCommand = {
       // TODO: handle non-2LD .eth names
       const labels = name.split('.')
       if (labels.length !== 2 || labels[1] !== 'eth') {
-        throw new Error(`v2 whois only supports 2LD .eth names`)
+        throw new Error(`v2 whois only supports 2LD .eth names for now`)
       }
       const label = labels[0]!
-      const dnsEncodedLabel = bytesToHex(packetToBytes(label))
 
-      const state = await client.readContract({
+      const { resolver } = await client.readContract({
+        address: universalResolverAddress ?? addresses[chain].universalResolver,
+        abi: universalResolverAbi,
+        functionName: 'findResolver',
+        args: [bytesToHex(packetToBytes(name))],
+      })
+
+      const { status, expiry, latestOwner, tokenId, resource } = await client.readContract({
         address: ethRegistry,
         abi: v2RegistryAbi,
         functionName: 'getState',
-        args: [BigInt(dnsEncodedLabel)],
+        args: [BigInt(labelhash(label))],
       })
 
       return {
         name,
         registry: ethRegistry,
-        ...state,
+        resolver: toNullableAddress(resolver),
+        status,
+        ...getExpiryDetails(name, expiry),
+        latestOwner: toNullableAddress(latestOwner),
+        tokenId,
+        resource,
       }
     }
 

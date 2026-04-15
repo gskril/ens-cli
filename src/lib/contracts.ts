@@ -157,6 +157,10 @@ export const universalResolverAbi = parseAbi([
   'function supportsInterface(bytes4 interfaceId) external view returns (bool)',
   'function findExactRegistry(bytes name) external view returns (address)',
   'function findCanonicalRegistry(bytes name) external view returns (address)',
+  'function findResolver(bytes name) external view returns ((address resolver, bytes32 node, uint256 offset))',
+  'error DNSDecodingFailed(bytes dns)',
+  'error LabelIsTooLong(string label)',
+  'error LabelIsEmpty()',
 ])
 
 export const v2RegistryAbi = parseAbi([
