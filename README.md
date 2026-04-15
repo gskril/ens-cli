@@ -12,7 +12,8 @@ Built with [Incur](https://github.com/wevm/incur) for agent-native features (MCP
 ## Install preview build
 
 ```sh
-alias ens='npx "https://pkg.pr.new/gskril/ens-cli/@ensdomains/cli@COMMIT_HASH"'
+alias ens='npx "https://pkg.pr.new/gskril/ens-cli/@ensdomains/cli@main"'
+ens
 ```
 
 Replace `COMMIT_HASH` with a recent commit hash. This creates a temporary `ens` alias for the current shell session. To make it permanent, add the line to your `~/.zshrc` or `~/.bashrc`.
