@@ -1,6 +1,6 @@
 import { z } from 'incur'
 import { validateName } from '../lib/utils.ts'
-import { getEnsAddress, getEnsName, getEnsText, getEnsAvatar } from 'viem/ens'
+import { getEnsAddress, getEnsName, getEnsText, getEnsAvatar, getEnsResolver } from 'viem/ens'
 import { globalOptions, globalEnv, clientFromContext } from '../lib/context.ts'
 import { resolveCoinType } from '../lib/cointype.ts'
 
@@ -27,6 +27,10 @@ export const resolveCommand = {
     const name = validateName(c.args.name)
     const coinType = resolveCoinType(c.options)
     const universalResolverAddress = c.options.universalResolver as `0x${string}` | undefined
+    const resolver = await getEnsResolver(client, {
+      name,
+      ...(universalResolverAddress ? { universalResolverAddress } : {}),
+    })
     const address = await getEnsAddress(client, {
       name,
       ...(coinType != null ? { coinType: BigInt(coinType) } : {}),
@@ -34,6 +38,7 @@ export const resolveCommand = {
     })
     return {
       name,
+      resolver,
       address,
       ...(coinType != null ? { coinType } : {}),
     }
