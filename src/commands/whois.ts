@@ -65,10 +65,18 @@ export const whoisCommand = {
         args: [BigInt(labelhash(label))],
       })
 
+      const owner = await client.readContract({
+        address: ethRegistry,
+        abi: v2RegistryAbi,
+        functionName: 'ownerOf',
+        args: [tokenId],
+      })
+
       return {
         name,
-        registry: ethRegistry,
+        owner: toNullableAddress(owner),
         resolver: toNullableAddress(resolver),
+        registry: ethRegistry,
         status,
         ...getExpiryDetails(name, expiry),
         latestOwner: toNullableAddress(latestOwner),

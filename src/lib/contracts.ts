@@ -165,6 +165,7 @@ export const universalResolverAbi = parseAbi([
 
 export const v2RegistryAbi = parseAbi([
   'function getState(uint256 anyId) external view returns ((uint8 status, uint64 expiry, address latestOwner, uint256 tokenId, uint256 resource))',
+  'function ownerOf(uint256 tokenId) external view returns (address)',
 ])
 
 export const addresses = {
