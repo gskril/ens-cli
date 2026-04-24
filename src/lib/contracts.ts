@@ -1,4 +1,4 @@
-import { parseAbi } from 'viem'
+import { parseAbi } from 'viem/utils'
 
 export const ethRegistrarControllerAbi = [
   {

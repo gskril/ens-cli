@@ -1,5 +1,5 @@
 import { z } from 'incur'
-import { formatEther } from 'viem'
+import { formatEther } from 'viem/utils'
 import { ethRegistrarControllerAbi, addresses } from '../lib/contracts.ts'
 import { globalOptions, globalEnv, clientFromContext } from '../lib/context.ts'
 import { extractLabel } from '../lib/utils.ts'

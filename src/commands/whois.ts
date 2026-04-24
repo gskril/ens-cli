@@ -1,5 +1,5 @@
 import { z } from 'incur'
-import { bytesToHex, zeroAddress } from 'viem'
+import { bytesToHex } from 'viem/utils'
 import { labelhash, namehash, packetToBytes } from 'viem/ens'
 import { globalOptions, globalEnv, clientFromContext, isV2Active } from '../lib/context.ts'
 import {
@@ -12,6 +12,7 @@ import {
 import { validateName } from '../lib/utils.ts'
 
 function toNullableAddress(value: `0x${string}`) {
+  const zeroAddress = '0x0000000000000000000000000000000000000000'
   return value === zeroAddress ? null : value
 }
 

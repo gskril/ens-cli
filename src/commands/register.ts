@@ -1,5 +1,5 @@
 import { Cli, z } from 'incur'
-import { encodeFunctionData, toHex } from 'viem'
+import { encodeFunctionData, toHex } from 'viem/utils'
 import { ethRegistrarControllerAbi, addresses } from '../lib/contracts.ts'
 import { globalOptions, globalEnv, clientFromContext } from '../lib/context.ts'
 import { extractLabel } from '../lib/utils.ts'

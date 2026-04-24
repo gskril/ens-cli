@@ -1,5 +1,5 @@
 import { Cli, z } from 'incur'
-import { encodeFunctionData } from 'viem'
+import { encodeFunctionData } from 'viem/utils'
 import { namehash } from 'viem/ens'
 import { validateName } from '../lib/utils.ts'
 import { publicResolverAbi, addresses } from '../lib/contracts.ts'
