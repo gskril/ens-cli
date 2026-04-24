@@ -13,7 +13,7 @@
   "files": ["dist"],
   "devDependencies": {
     "@types/bun": "latest",
-    "incur": "^0.3.13",
+    "incur": "^0.4.4",
     "prettier": "^3.8.1",
     "typescript": "^5.9.3",
     "viem": "^2.47.6"
