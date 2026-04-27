@@ -88,6 +88,23 @@ ens price myname.eth
 ens renew myname.eth --value 2307947853431408 --json
 ```
 
+### Subnames
+
+Generate calldata to create a subname under a parent you own. The command first reads the parent's onchain owner — if there is no owner, no calldata can be generated. If the parent is wrapped in the NameWrapper, the calldata targets the NameWrapper instead of the registry.
+
+```sh
+# Create a subname under an unwrapped parent (registry.setSubnodeRecord)
+ens subname create sub.parent.eth 0xNewOwner
+
+# Create a subname under a wrapped parent (NameWrapper.setSubnodeRecord)
+ens subname create sub.wrapped.eth 0xNewOwner --fuses 0 --expiry 0
+
+# Custom resolver
+ens subname create sub.parent.eth 0xNewOwner --resolver 0x...
+```
+
+Options: `--resolver` (defaults to chain public resolver), `--fuses` and `--expiry` (NameWrapper only, both default to 0).
+
 ### Setting Records
 
 All set commands output calldata JSON targeting the public resolver.
@@ -195,7 +212,8 @@ src/
     ├── price.ts        # Registration/renewal pricing
     ├── register.ts     # commit + reveal (nested group)
     ├── renew.ts        # Renewal calldata
-    └── set.ts          # address, text, contenthash, batch (nested group)
+    ├── set.ts          # address, text, contenthash, batch (nested group)
+    └── subname.ts      # create (nested group)
 ```
 
 ### Adding a command
