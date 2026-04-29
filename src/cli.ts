@@ -5,6 +5,7 @@ import { priceCommand } from './commands/price.ts'
 import { registerCommands } from './commands/register.ts'
 import { renewCommand } from './commands/renew.ts'
 import { setCommands } from './commands/set.ts'
+import { subnameCommands } from './commands/subname.ts'
 import { whoisCommand } from './commands/whois.ts'
 
 export const cli = Cli.create('ens', {
@@ -25,3 +26,4 @@ export const cli = Cli.create('ens', {
   .command('renew', renewCommand)
   .command(registerCommands)
   .command(setCommands)
+  .command(subnameCommands)
