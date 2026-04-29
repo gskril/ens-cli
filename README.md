@@ -1,4 +1,7 @@
-# @ensdomains/cli
+# ENS CLI
+
+> [!WARNING]
+> This is an unofficial ENS tool. It's experimental and will have frequent breaking changes.
 
 A command-line tool for interacting with ENS (Ethereum Name Service). Built for autonomous AI agents but works for humans too.
 
