@@ -12,6 +12,9 @@ export const cli = Cli.create('ens', {
   version: '0.1.0',
   description:
     'ENS CLI for resolving names, checking availability, generating registration and record-setting calldata. Designed for autonomous agents. Use --rpc <url> or ETH_RPC_URL env var to set the RPC endpoint. Use --chain mainnet|sepolia to select the network.',
+  mcp: {
+    command: 'npx "https://pkg.pr.new/gskril/ens-cli/@ensdomains/cli@main" --mcp',
+  },
 })
   // Resolution
   .command('resolve', resolveCommand)
