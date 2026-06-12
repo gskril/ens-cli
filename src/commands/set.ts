@@ -108,17 +108,22 @@ export const setCommands = Cli.create('set', {
       'Generate calldata to set the address record for an ENS name. Resolves the target resolver via the Universal Resolver unless --resolver is passed.',
     args: z.object({
       name: z.string().describe('ENS name (e.g. myname.eth)'),
-      address: z.string().describe('Address to set'),
     }),
-    options: globalOptions.merge(resolverOption).merge(coinTypeOptions),
+    options: globalOptions
+      .merge(resolverOption)
+      .merge(coinTypeOptions)
+      .merge(
+        z.object({
+          address: z.string().describe('Address to set'),
+        }),
+      ),
     env: globalEnv,
-    alias: { resolver: 'r', coinType: 'c', chainId: 'i' },
     async run(c) {
       const name = validateName(c.args.name)
       const resolverAddress = await resolveTargetResolver(c, name)
       const node = namehash(name)
       const coinType = resolveCoinType(c.options)
-      const data = encodeSetAddr(node, c.args.address, coinType)
+      const data = encodeSetAddr(node, c.options.address, coinType)
       return { to: resolverAddress, data, value: '0' }
     },
   })
@@ -127,17 +132,19 @@ export const setCommands = Cli.create('set', {
       'Generate calldata to set a text record for an ENS name. Resolves the target resolver via the Universal Resolver unless --resolver is passed.',
     args: z.object({
       name: z.string().describe('ENS name (e.g. myname.eth)'),
-      key: z.string().describe('Text record key (e.g. com.twitter, url)'),
-      value: z.string().describe('Text record value'),
     }),
-    options: globalOptions.merge(resolverOption),
+    options: globalOptions.merge(resolverOption).merge(
+      z.object({
+        key: z.string().describe('Text record key (e.g. com.twitter, url)'),
+        value: z.string().describe('Text record value'),
+      }),
+    ),
     env: globalEnv,
-    alias: { resolver: 'r' },
     async run(c) {
       const name = validateName(c.args.name)
       const resolverAddress = await resolveTargetResolver(c, name)
       const node = namehash(name)
-      const data = encodeSetText(node, c.args.key, c.args.value)
+      const data = encodeSetText(node, c.options.key, c.options.value)
       return { to: resolverAddress, data, value: '0' }
     },
   })
@@ -146,16 +153,18 @@ export const setCommands = Cli.create('set', {
       'Generate calldata to set the content hash for an ENS name. Resolves the target resolver via the Universal Resolver unless --resolver is passed.',
     args: z.object({
       name: z.string().describe('ENS name (e.g. myname.eth)'),
-      hash: z.string().describe('Content hash in hex (EIP-1577 encoded)'),
     }),
-    options: globalOptions.merge(resolverOption),
+    options: globalOptions.merge(resolverOption).merge(
+      z.object({
+        hash: z.string().describe('Content hash in hex (EIP-1577 encoded)'),
+      }),
+    ),
     env: globalEnv,
-    alias: { resolver: 'r' },
     async run(c) {
       const name = validateName(c.args.name)
       const resolverAddress = await resolveTargetResolver(c, name)
       const node = namehash(name)
-      const data = encodeSetContenthash(node, c.args.hash)
+      const data = encodeSetContenthash(node, c.options.hash)
       return { to: resolverAddress, data, value: '0' }
     },
   })
@@ -175,7 +184,6 @@ export const setCommands = Cli.create('set', {
       }),
     ),
     env: globalEnv,
-    alias: { resolver: 'r' },
     async run(c) {
       const name = validateName(c.args.name)
       const resolverAddress = await resolveTargetResolver(c, name)

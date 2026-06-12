@@ -22,7 +22,6 @@ export const getCommands = Cli.create('get', {
     }),
     options: resolveOptions,
     env: globalEnv,
-    alias: { coinType: 'c', chainId: 'i' },
     async run(c) {
       const { client } = clientFromContext(c)
       const name = validateName(c.args.name)
@@ -47,7 +46,6 @@ export const getCommands = Cli.create('get', {
     }),
     options: resolveOptions,
     env: globalEnv,
-    alias: { coinType: 'c', chainId: 'i' },
     async run(c) {
       const { client } = clientFromContext(c)
       const address = getAddress(c.args.address)
@@ -68,19 +66,22 @@ export const getCommands = Cli.create('get', {
     description: 'Get a text record for an ENS name',
     args: z.object({
       name: z.string().describe('ENS name (e.g. vitalik.eth)'),
-      key: z.string().describe('Text record key (e.g. com.twitter, url, description)'),
     }),
-    options: globalOptions,
+    options: globalOptions.merge(
+      z.object({
+        key: z.string().describe('Text record key (e.g. com.twitter, url, description)'),
+      }),
+    ),
     env: globalEnv,
     async run(c) {
       const { client } = clientFromContext(c)
       const name = validateName(c.args.name)
       const value = await getEnsText(client, {
         name,
-        key: c.args.key,
+        key: c.options.key,
         ...universalResolverParam(c),
       })
-      return { name, key: c.args.key, value }
+      return { name, key: c.options.key, value }
     },
   })
   .command('avatar', {

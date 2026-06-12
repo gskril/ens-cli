@@ -31,7 +31,6 @@ export const renewCommand = Cli.create('renew', {
     }),
   ),
   env: globalEnv,
-  alias: { duration: 'd', value: 'v' },
   async run(c) {
     const { chain } = clientFromContext(c)
     const controllerAddress = addresses[chain].controller

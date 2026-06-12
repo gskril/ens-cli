@@ -29,7 +29,6 @@ export const priceCommand = Cli.create('price', {
     }),
   ),
   env: globalEnv,
-  alias: { duration: 'd', paymentToken: 'p' },
   async run(c) {
     const { client, chain } = clientFromContext(c)
     const label = extractLabel(c.args.name)

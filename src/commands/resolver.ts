@@ -103,7 +103,6 @@ export const resolverCommands = Cli.create('resolver', {
       }),
     ),
     env: globalEnv,
-    alias: { admin: 'a', salt: 's' },
     async run(c) {
       const { client, chain } = clientFromContext(c)
       const v2Deployment = v2DeploymentForChain(chain)
@@ -172,14 +171,17 @@ export const resolverCommands = Cli.create('resolver', {
       'Generate calldata to change the resolver of an existing ENS name. Auto-routes between the v2 registry, the v1 NameWrapper (for wrapped names), and the v1 ENS registry (for unwrapped names).',
     args: z.object({
       name: z.string().describe('ENS name to update (e.g. myname.eth)'),
-      resolver: z.string().describe('New resolver address'),
     }),
-    options: globalOptions,
+    options: globalOptions.merge(
+      z.object({
+        resolver: z.string().describe('New resolver address'),
+      }),
+    ),
     env: globalEnv,
     async run(c) {
       const { client, chain } = clientFromContext(c)
       const name = validateName(c.args.name)
-      const resolver = getAddress(c.args.resolver)
+      const resolver = getAddress(c.options.resolver)
       const v2Deployment = await activeV2Deployment(c)
 
       if (v2Deployment) {

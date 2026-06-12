@@ -40,8 +40,8 @@ ens get address vitalik.eth --coin-type 0  # BTC address
 ens get name 0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045
 
 # Get a text record
-ens get text vitalik.eth url
-ens get text vitalik.eth com.twitter
+ens get text vitalik.eth --key url
+ens get text vitalik.eth --key com.twitter
 
 # Get avatar URL
 ens get avatar vitalik.eth
@@ -67,12 +67,13 @@ Registration is a two-step process. Both commands output calldata JSON.
 
 ```sh
 # Step 1: Generate commit transaction
-ens register commit myname.eth 0xYourAddress --json
+ens register commit myname.eth --owner 0xYourAddress --json
 # Returns: { to, data, value, secret, ... }
 # SAVE THE SECRET — you need it for step 2
 
 # Step 2: Wait 60+ seconds after commit is mined, then generate register transaction
-ens register reveal myname.eth 0xYourAddress \
+ens register reveal myname.eth \
+  --owner 0xYourAddress \
   --secret 0x... \
   --value 2307947853431408 \
   --json
@@ -88,7 +89,7 @@ On ENSv2 (Sepolia), `--resolver` defaults to the zero address. To register with 
 Change the resolver for an already-registered name. Auto-routes between the v2 registry, the v1 NameWrapper (for wrapped names), and the v1 ENS registry (for unwrapped names).
 
 ```sh
-ens resolver set myname.eth 0xResolverAddr --chain sepolia
+ens resolver set myname.eth --resolver 0xResolverAddr --chain sepolia
 # Returns: { to, data, value, version, wrapped, ... }
 ```
 
@@ -125,13 +126,13 @@ Generate calldata to create a subname under a parent you own. The command first 
 
 ```sh
 # Create a subname under an unwrapped parent (registry.setSubnodeRecord)
-ens subname create sub.parent.eth 0xNewOwner
+ens subname create sub.parent.eth --owner 0xNewOwner
 
 # Create a subname under a wrapped parent (NameWrapper.setSubnodeRecord)
-ens subname create sub.wrapped.eth 0xNewOwner --fuses 0 --expiry 0
+ens subname create sub.wrapped.eth --owner 0xNewOwner --fuses 0 --expiry 0
 
 # Custom resolver
-ens subname create sub.parent.eth 0xNewOwner --resolver 0x...
+ens subname create sub.parent.eth --owner 0xNewOwner --resolver 0x...
 ```
 
 Options: `--resolver` (defaults to chain public resolver), `--fuses` and `--expiry` (NameWrapper only, both default to 0).
@@ -142,15 +143,15 @@ All set commands output calldata JSON. The target resolver is read from the Univ
 
 ```sh
 # Set address record
-ens set address myname.eth 0x1234...
-ens set address myname.eth 0x1234... --coin-type 0  # BTC
+ens set address myname.eth --address 0x1234...
+ens set address myname.eth --address 0x1234... --coin-type 0  # BTC
 
 # Set text record
-ens set text myname.eth url https://example.com
-ens set text myname.eth com.twitter @myhandle
+ens set text myname.eth --key url --value https://example.com
+ens set text myname.eth --key com.twitter --value @myhandle
 
 # Set content hash
-ens set contenthash myname.eth 0x...
+ens set contenthash myname.eth --hash 0x...
 
 # Batch set multiple records (multicall)
 ens set batch myname.eth --data '[
@@ -218,10 +219,10 @@ bun install
 
 ```sh
 # Run any command directly
-bun src/index.ts resolve vitalik.eth
+bun src/index.ts get address vitalik.eth
 
 # With a custom RPC
-bun src/index.ts resolve vitalik.eth --rpc http://localhost:8545
+bun src/index.ts get address vitalik.eth --rpc http://localhost:8545
 
 # With environment variable
 ETH_RPC_URL=http://localhost:8545 bun src/index.ts available myname.eth
@@ -237,7 +238,7 @@ src/
 │   ├── client.ts       # viem public client with fallback transports
 │   └── contracts.ts    # ABIs and contract addresses
 └── commands/
-    ├── resolve.ts      # resolve, reverse, text, avatar
+    ├── get.ts          # address, name, text, avatar (nested group)
     ├── whois.ts        # owner, resolver, expiry lookup
     ├── available.ts    # Name availability check
     ├── price.ts        # Registration/renewal pricing
@@ -248,8 +249,16 @@ src/
     └── subname.ts      # create (nested group)
 ```
 
+### Command design conventions
+
+- **One positional argument per command: the subject it operates on** (an ENS name or an address). Everything else is a named option, whether required or optional. Example: `ens set text myname.eth --key url --value https://example.com` — never `ens set text myname.eth url https://example.com`. Multiple positionals force the caller to memorize parameter order; named options are self-documenting in scripts, shell history, and agent transcripts.
+- **Required options are simply non-`.optional()` in the Zod options schema** — validation fails with a clear error if they're missing.
+- **No single-character option aliases.** Spell out `--resolver`, not `-r`.
+- **Group related commands** (`get`, `set`, `register`, `resolver`, `subname`) rather than adding top-level commands for each operation.
+
 ### Adding a command
 
 1. Create a command file in `src/commands/` exporting a function that returns a command definition (for flat commands) or a `Cli.create()` group (for nested subcommands).
-2. Mount it in `src/cli.ts` via `.command()`.
-3. Test against mainnet or a local fork: `bun src/index.ts <your-command>`.
+2. Follow the command design conventions above.
+3. Mount it in `src/cli.ts` via `.command()`.
+4. Test against mainnet or a local fork: `bun src/index.ts <your-command>`.

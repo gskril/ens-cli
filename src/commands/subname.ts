@@ -25,10 +25,10 @@ export const subnameCommands = Cli.create('subname', {
     'Generate calldata to create a subname. Reads the parent owner first — if the parent has no onchain owner, a subname cannot be created via onchain contracts. If the parent is wrapped in the NameWrapper, generates calldata for the NameWrapper instead of the registry.',
   args: z.object({
     name: z.string().describe('Full subname to create (e.g. sub.parent.eth)'),
-    owner: z.string().describe('Address that will own the new subname'),
   }),
   options: globalOptions.merge(
     z.object({
+      owner: z.string().describe('Address that will own the new subname'),
       resolver: z
         .string()
         .optional()
@@ -48,7 +48,6 @@ export const subnameCommands = Cli.create('subname', {
     }),
   ),
   env: globalEnv,
-  alias: { resolver: 'r' },
   async run(c) {
     const { client, chain } = clientFromContext(c)
     const registryAddress = addresses[chain].registry
@@ -70,7 +69,7 @@ export const subnameCommands = Cli.create('subname', {
       )
     }
 
-    const owner = getAddress(c.args.owner)
+    const owner = getAddress(c.options.owner)
     const resolver = c.options.resolver ? getAddress(c.options.resolver) : addresses[chain].resolver
     const labelHash = labelhash(label)
     const node = namehash(name)

@@ -50,10 +50,10 @@ export const registerCommands = Cli.create('register', {
       'Generate the commitment transaction for registering an ENS name. Returns calldata JSON and a secret that MUST be saved for the reveal step. Wait at least 60 seconds after the commit transaction is mined before calling reveal.',
     args: z.object({
       name: z.string().describe('ENS name to register (e.g. myname.eth)'),
-      owner: z.string().describe('Address that will own the name'),
     }),
     options: globalOptions.merge(
       z.object({
+        owner: z.string().describe('Address that will own the name'),
         duration: z.coerce
           .number()
           .optional()
@@ -78,11 +78,10 @@ export const registerCommands = Cli.create('register', {
       }),
     ),
     env: globalEnv,
-    alias: { duration: 'd', secret: 's', resolver: 'r' },
     async run(c) {
       const { client, chain } = clientFromContext(c)
       const label = extractLabel(c.args.name)
-      const owner = getAddress(c.args.owner)
+      const owner = getAddress(c.options.owner)
       const duration = durationFromOption(c.options.duration)
       const secret = c.options.secret ? asHex(c.options.secret, 'secret') : generateSecret()
       const v2Deployment = await activeV2Deployment(c)
@@ -136,7 +135,7 @@ export const registerCommands = Cli.create('register', {
             '2. Wait at least 60 seconds after the tx is mined',
             `3. Run: ens price ${c.args.name} --chain ${chain} --paymentToken ${paymentToken}`,
             `4. Approve ${v2Deployment.registrar} to spend the total ERC-20 price`,
-            `5. Run: ens register reveal ${c.args.name} ${c.args.owner} --chain ${chain} --secret ${secret} --paymentToken ${paymentToken}${resolver === zeroAddress ? '' : ` --resolver ${resolver}`}`,
+            `5. Run: ens register reveal ${c.args.name} --owner ${owner} --chain ${chain} --secret ${secret} --paymentToken ${paymentToken}${resolver === zeroAddress ? '' : ` --resolver ${resolver}`}`,
           ],
         }
       }
@@ -185,7 +184,7 @@ export const registerCommands = Cli.create('register', {
           '1. Broadcast this commit transaction',
           '2. Wait at least 60 seconds after the tx is mined',
           `3. Run: ens price ${c.args.name} -- IMPORTANT: fetch price immediately before reveal, not earlier, because the required ETH amount changes with the ETH/USD price`,
-          `4. Run: ens register reveal ${c.args.name} ${c.args.owner} --secret ${secret} --value <bufferedTotal from price>`,
+          `4. Run: ens register reveal ${c.args.name} --owner ${owner} --secret ${secret} --value <bufferedTotal from price>`,
         ],
       }
     },
@@ -195,10 +194,10 @@ export const registerCommands = Cli.create('register', {
       'Generate the registration transaction to reveal a committed ENS name. Requires the secret from the commit step and a value (in wei) from the price command.',
     args: z.object({
       name: z.string().describe('ENS name to register (e.g. myname.eth)'),
-      owner: z.string().describe('Address that will own the name'),
     }),
     options: globalOptions.merge(
       z.object({
+        owner: z.string().describe('Address that will own the name'),
         secret: z.string().describe('Secret from the commit step (required)'),
         value: z
           .string()
@@ -224,11 +223,10 @@ export const registerCommands = Cli.create('register', {
       }),
     ),
     env: globalEnv,
-    alias: { duration: 'd', secret: 's', resolver: 'r', value: 'v', paymentToken: 'p' },
     async run(c) {
       const { chain } = clientFromContext(c)
       const label = extractLabel(c.args.name)
-      const owner = getAddress(c.args.owner)
+      const owner = getAddress(c.options.owner)
       const duration = durationFromOption(c.options.duration)
       const secret = asHex(c.options.secret, 'secret')
       const v2Deployment = await activeV2Deployment(c)
