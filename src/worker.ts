@@ -77,6 +77,13 @@ export default {
   async fetch(req: Request) {
     const url = new URL(req.url)
     if (url.pathname === '/mcp') {
+      // Stateless mode: no SSE listening stream, no session to delete. The
+      // Streamable HTTP spec says to answer GET/DELETE with 405 so clients
+      // stop retrying; the transport otherwise hangs on GET and the Workers
+      // runtime kills the request.
+      if (req.method !== 'POST') {
+        return new Response(null, { status: 405, headers: { allow: 'POST' } })
+      }
       const transport = new WebStandardStreamableHTTPServerTransport({
         sessionIdGenerator: undefined,
         enableJsonResponse: true,
