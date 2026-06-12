@@ -213,6 +213,7 @@ export const baseRegistrarAbi = parseAbi([
 export const ensRegistryAbi = parseAbi([
   'function owner(bytes32 node) external view returns (address)',
   'function resolver(bytes32 node) external view returns (address)',
+  'function setResolver(bytes32 node, address resolver) external',
   'function setSubnodeOwner(bytes32 node, bytes32 label, address owner) external returns (bytes32)',
   'function setSubnodeRecord(bytes32 node, bytes32 label, address owner, address resolver, uint64 ttl) external',
 ])
@@ -230,6 +231,7 @@ export const universalResolverAbi = parseAbi([
 export const v2RegistryAbi = parseAbi([
   'function getState(uint256 anyId) external view returns ((uint8 status, uint64 expiry, address latestOwner, uint256 tokenId, uint256 resource))',
   'function ownerOf(uint256 tokenId) external view returns (address)',
+  'function setResolver(uint256 anyId, address resolver) external',
 ])
 
 export const verifiableFactoryAbi = parseAbi([
@@ -244,6 +246,7 @@ export const permissionedResolverAbi = parseAbi([
 
 export const nameWrapperAbi = parseAbi([
   'function ownerOf(uint256 id) external view returns (address)',
+  'function setResolver(bytes32 node, address resolver) external',
   'function setSubnodeOwner(bytes32 parentNode, string label, address owner, uint32 fuses, uint64 expiry) external returns (bytes32)',
   'function setSubnodeRecord(bytes32 parentNode, string label, address owner, address resolver, uint64 ttl, uint32 fuses, uint64 expiry) external returns (bytes32)',
 ])

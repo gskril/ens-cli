@@ -4,18 +4,31 @@ import {
   encodeAbiParameters,
   encodeFunctionData,
   getContractAddress,
+  isAddressEqual,
   isHex,
   keccak256,
   stringToBytes,
   toHex,
 } from 'viem/utils'
-import { permissionedResolverAbi, verifiableFactoryAbi } from '../lib/contracts.ts'
+import { labelhash, namehash } from 'viem/ens'
+import {
+  addresses,
+  ensRegistryAbi,
+  nameWrapperAbi,
+  permissionedResolverAbi,
+  v2RegistryAbi,
+  verifiableFactoryAbi,
+} from '../lib/contracts.ts'
 import {
   globalOptions,
   globalEnv,
   clientFromContext,
+  isV2Active,
   v2DeploymentForChain,
 } from '../lib/context.ts'
+import { validateName } from '../lib/utils.ts'
+
+const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000' as const
 
 const DEFAULT_ROLE_BITMAP = BigInt(
   '0x1111111111111111111111111111111111111111111111111111111111111111',
@@ -153,3 +166,129 @@ export const resolverCommands = Cli.create('resolver', {
     }
   },
 })
+  .command('set', {
+    description:
+      'Generate calldata to change the resolver of an existing ENS name. Auto-routes between the v2 registry, the v1 NameWrapper (for wrapped names), and the v1 ENS registry (for unwrapped names).',
+    args: z.object({
+      name: z.string().describe('ENS name to update (e.g. myname.eth)'),
+      resolver: z.string().describe('New resolver address'),
+    }),
+    options: globalOptions,
+    env: globalEnv,
+    async run(c) {
+      const { client, chain } = clientFromContext(c)
+      const name = validateName(c.args.name)
+      const resolver = c.args.resolver as `0x${string}`
+      const universalResolverAddress = c.options.universalResolver as `0x${string}` | undefined
+      const { isV2 } = await isV2Active(c, universalResolverAddress)
+      const v2Deployment = isV2 ? v2DeploymentForChain(chain) : undefined
+
+      if (v2Deployment) {
+        const labels = name.split('.')
+        if (labels.length !== 2 || labels[1] !== 'eth') {
+          throw new Error('ENSv2 resolver set currently only supports 2LD .eth names')
+        }
+        const label = labels[0]!
+        const anyId = BigInt(labelhash(label))
+
+        const { status, latestOwner, tokenId } = await client.readContract({
+          address: v2Deployment.registry,
+          abi: v2RegistryAbi,
+          functionName: 'getState',
+          args: [anyId],
+        })
+        if (status !== 2) {
+          throw new Error(
+            `"${name}" is not registered on the v2 registry (status=${status}). Register it first via ens register.`,
+          )
+        }
+
+        const data = encodeFunctionData({
+          abi: v2RegistryAbi,
+          functionName: 'setResolver',
+          args: [anyId, resolver],
+        })
+
+        return {
+          to: v2Deployment.registry,
+          data,
+          value: '0',
+          name,
+          label,
+          resolver,
+          registry: v2Deployment.registry,
+          tokenId: tokenId.toString(),
+          latestOwner,
+          version: 'v2',
+          note: 'Transaction must be sent from the name owner or an approved operator.',
+        }
+      }
+
+      const registryAddress = addresses[chain].registry
+      const nameWrapperAddress = addresses[chain].nameWrapper
+      const node = namehash(name)
+
+      const registryOwner = await client.readContract({
+        address: registryAddress,
+        abi: ensRegistryAbi,
+        functionName: 'owner',
+        args: [node],
+      })
+
+      if (registryOwner === ZERO_ADDRESS) {
+        throw new Error(
+          `"${name}" has no owner in the ENS registry. A resolver cannot be set on an unowned name.`,
+        )
+      }
+
+      const wrapped = isAddressEqual(registryOwner, nameWrapperAddress)
+
+      if (wrapped) {
+        const wrappedOwner = await client.readContract({
+          address: nameWrapperAddress,
+          abi: nameWrapperAbi,
+          functionName: 'ownerOf',
+          args: [BigInt(node)],
+        })
+
+        const data = encodeFunctionData({
+          abi: nameWrapperAbi,
+          functionName: 'setResolver',
+          args: [node, resolver],
+        })
+
+        return {
+          to: nameWrapperAddress,
+          data,
+          value: '0',
+          name,
+          node,
+          resolver,
+          owner: wrappedOwner,
+          registryOwner,
+          wrapped: true,
+          version: 'v1',
+          note: 'Name is wrapped — call NameWrapper.setResolver. Transaction must be sent from the wrapped owner (or an approved operator).',
+        }
+      }
+
+      const data = encodeFunctionData({
+        abi: ensRegistryAbi,
+        functionName: 'setResolver',
+        args: [node, resolver],
+      })
+
+      return {
+        to: registryAddress,
+        data,
+        value: '0',
+        name,
+        node,
+        resolver,
+        owner: registryOwner,
+        wrapped: false,
+        version: 'v1',
+        note: 'Transaction must be sent from the registry owner (or an approved operator).',
+      }
+    },
+  })

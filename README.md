@@ -83,6 +83,17 @@ Options for both commands: `--duration` (seconds, default 1 year), `--resolver`,
 
 On ENSv2 (Sepolia), `--resolver` defaults to the zero address. To register with a working resolver, deploy a per-account permissioned resolver first (see below) and pass its address via `--resolver`.
 
+### Resolver management
+
+Change the resolver for an already-registered name. Auto-routes between the v2 registry, the v1 NameWrapper (for wrapped names), and the v1 ENS registry (for unwrapped names).
+
+```sh
+ens resolver set myname.eth 0xResolverAddr --chain sepolia
+# Returns: { to, data, value, version, wrapped, ... }
+```
+
+Transaction must be sent from the name owner (or an approved operator).
+
 ### Resolver deployment (ENSv2)
 
 ENSv2 registers do not set a resolver by default — the v1 Public Resolver can't be reused because its authorisation is gated by the v1 registry, which knows nothing about v2-registered names. Instead, each owner deploys their own `PermissionedResolver` proxy through the v2 `VerifiableFactory`.
