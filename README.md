@@ -81,6 +81,23 @@ ens register reveal myname.eth 0xYourAddress \
 
 Options for both commands: `--duration` (seconds, default 1 year), `--resolver`, `--reverse-record`.
 
+On ENSv2 (Sepolia), `--resolver` defaults to the zero address. To register with a working resolver, deploy a per-account permissioned resolver first (see below) and pass its address via `--resolver`.
+
+### Resolver deployment (ENSv2)
+
+ENSv2 registers do not set a resolver by default — the v1 Public Resolver can't be reused because its authorisation is gated by the v1 registry, which knows nothing about v2-registered names. Instead, each owner deploys their own `PermissionedResolver` proxy through the v2 `VerifiableFactory`.
+
+```sh
+# Predicts the CREATE2 address and emits deployProxy calldata.
+# alreadyDeployed=true short-circuits when the resolver already exists.
+ens resolver deploy 0xYourAddress --chain sepolia --json
+# Returns: { to, data, value, resolver, alreadyDeployed, ... }
+```
+
+The resolver address is derived from `(factory, proxyLogic, deployer, salt)`, so the deploy transaction must be sent from `deployer`. The salt defaults to `keccak256("ens-v2-resolver:<deployer>")` — one resolver per account.
+
+Options: `--admin` (defaults to deployer), `--salt` (decimal or 0x hex), `--role-bitmap` (decimal or 0x hex, default `0x1111…1111`).
+
 ### Renewal
 
 ```sh
@@ -215,6 +232,7 @@ src/
     ├── price.ts        # Registration/renewal pricing
     ├── register.ts     # commit + reveal (nested group)
     ├── renew.ts        # Renewal calldata
+    ├── resolver.ts     # deploy ENSv2 permissioned resolver (nested group)
     ├── set.ts          # address, text, contenthash, batch (nested group)
     └── subname.ts      # create (nested group)
 ```

@@ -48,6 +48,9 @@ export function v2DeploymentForChain(chain: Chain) {
       registry: `0x${string}`
       registrar: `0x${string}`
       paymentToken: `0x${string}`
+      resolverFactory: `0x${string}`
+      resolverImplementation: `0x${string}`
+      resolverProxyLogic: `0x${string}`
     }
   }
   return chainAddresses.v2

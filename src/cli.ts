@@ -4,6 +4,7 @@ import { availableCommand } from './commands/available.ts'
 import { priceCommand } from './commands/price.ts'
 import { registerCommands } from './commands/register.ts'
 import { renewCommand } from './commands/renew.ts'
+import { resolverCommands } from './commands/resolver.ts'
 import { setCommands } from './commands/set.ts'
 import { subnameCommands } from './commands/subname.ts'
 import { whoisCommand } from './commands/whois.ts'
@@ -28,5 +29,6 @@ export const cli = Cli.create('ens', {
   // Write operations (calldata output)
   .command('renew', renewCommand)
   .command(registerCommands)
+  .command(resolverCommands)
   .command(setCommands)
   .command(subnameCommands)

@@ -232,6 +232,16 @@ export const v2RegistryAbi = parseAbi([
   'function ownerOf(uint256 tokenId) external view returns (address)',
 ])
 
+export const verifiableFactoryAbi = parseAbi([
+  'function deployProxy(address implementation, uint256 salt, bytes data) external returns (address)',
+  'function proxyLogic() external view returns (address)',
+  'function verifyContract(address proxy, address implementation) external view returns (bool)',
+])
+
+export const permissionedResolverAbi = parseAbi([
+  'function initialize(address admin, uint256 roleBitmap) external',
+])
+
 export const nameWrapperAbi = parseAbi([
   'function ownerOf(uint256 id) external view returns (address)',
   'function setSubnodeOwner(bytes32 parentNode, string label, address owner, uint32 fuses, uint64 expiry) external returns (bytes32)',
@@ -258,6 +268,9 @@ export const addresses = {
       registry: '0xDEDB92913A25abE1f7BCDD85D8A344a43B398B67' as const,
       registrar: '0x8c2E866B439358c41AE05De9cbE8A00BFEFafFcA' as const,
       paymentToken: '0x3DfC8b53dAFa5eBbb071a8B97678Ab534Ed838D9' as const,
+      resolverFactory: '0xd2A632D8A8b67C2c4398c255CBd7Af8Dd7236198' as const,
+      resolverImplementation: '0xdcE5205A553573FFd47629327DDdf36186022FfA' as const,
+      resolverProxyLogic: '0x917C561a74Df398646e06f3FFAA51DB8e8330C5A' as const,
     },
   },
 } as const

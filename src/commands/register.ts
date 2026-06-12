@@ -72,7 +72,7 @@ export const registerCommands = Cli.create('register', {
           .string()
           .optional()
           .describe(
-            'Resolver address (defaults to chain public resolver on ENSv1, zero address on ENSv2)',
+            'Resolver address (defaults to chain public resolver on ENSv1, zero address on ENSv2). For ENSv2, deploy a per-account resolver via `ens resolver deploy <deployer>` and pass the result here.',
           ),
         subregistry: z
           .string()
@@ -116,6 +116,11 @@ export const registerCommands = Cli.create('register', {
           args: [commitment],
         })
 
+        const resolverHint =
+          resolver === ZERO_ADDRESS
+            ? `Optional: deploy a per-account resolver with: ens resolver deploy ${owner} --chain ${chain}, then re-run commit/reveal with --resolver <addr>.`
+            : undefined
+
         return {
           to: v2Deployment.registrar,
           data,
@@ -133,12 +138,13 @@ export const registerCommands = Cli.create('register', {
           registry: v2Deployment.registry,
           registrar: v2Deployment.registrar,
           version: 'v2',
+          resolverHint,
           nextSteps: [
             '1. Broadcast this commit transaction',
             '2. Wait at least 60 seconds after the tx is mined',
             `3. Run: ens price ${c.args.name} --chain ${chain} --paymentToken ${paymentToken}`,
             `4. Approve ${v2Deployment.registrar} to spend the total ERC-20 price`,
-            `5. Run: ens register reveal ${c.args.name} ${c.args.owner} --chain ${chain} --secret ${secret} --paymentToken ${paymentToken}`,
+            `5. Run: ens register reveal ${c.args.name} ${c.args.owner} --chain ${chain} --secret ${secret} --paymentToken ${paymentToken}${resolver === ZERO_ADDRESS ? '' : ` --resolver ${resolver}`}`,
           ],
         }
       }
