@@ -1,15 +1,55 @@
 import { Cli, z } from 'incur'
 import { encodeFunctionData } from 'viem/utils'
-import { namehash } from 'viem/ens'
+import { getEnsResolver, namehash } from 'viem/ens'
 import { validateName } from '../lib/utils.ts'
-import { publicResolverAbi, addresses } from '../lib/contracts.ts'
+import { publicResolverAbi } from '../lib/contracts.ts'
 import { globalOptions, globalEnv, clientFromContext } from '../lib/context.ts'
 import { resolveCoinType } from '../lib/cointype.ts'
+
+const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000' as const
 
 type BatchOperation =
   | { type: 'address'; address: string; coinType?: number; chainId?: number }
   | { type: 'text'; key: string; value: string }
   | { type: 'contenthash'; hash: string }
+
+type ResolveResolverContext = {
+  options: {
+    resolver?: string
+    universalResolver?: string
+    rpc?: string
+    chain?: string
+  }
+  env: { ETH_RPC_URL?: string }
+}
+
+async function resolveTargetResolver(
+  c: ResolveResolverContext,
+  name: string,
+): Promise<`0x${string}`> {
+  if (c.options.resolver) return c.options.resolver as `0x${string}`
+
+  const { client } = clientFromContext(c)
+  const universalResolverAddress = c.options.universalResolver as `0x${string}` | undefined
+
+  let resolver: `0x${string}` | null = null
+  try {
+    resolver = await getEnsResolver(client, {
+      name,
+      ...(universalResolverAddress ? { universalResolverAddress } : {}),
+    })
+  } catch {
+    // Universal Resolver lookup failed — fall through to the no-resolver error
+  }
+
+  if (!resolver || resolver === ZERO_ADDRESS) {
+    throw new Error(
+      `No resolver set for "${name}". Pass --resolver <address> to target a specific resolver, or set one on the registry first.`,
+    )
+  }
+
+  return resolver
+}
 
 function encodeSetAddr(node: `0x${string}`, address: string, coinType?: number): `0x${string}` {
   if (coinType != null) {
@@ -53,16 +93,26 @@ function encodeBatchOperation(node: `0x${string}`, op: BatchOperation): `0x${str
   }
 }
 
+const resolverOption = z.object({
+  resolver: z
+    .string()
+    .optional()
+    .describe(
+      'Resolver address to target. If omitted, the resolver is read from the Universal Resolver; if none is set, the command fails.',
+    ),
+})
+
 export const setCommands = Cli.create('set', {
   description: 'Set ENS records (outputs calldata JSON)',
 })
   .command('address', {
-    description: 'Generate calldata to set the address record for an ENS name',
+    description:
+      'Generate calldata to set the address record for an ENS name. Resolves the target resolver via the Universal Resolver unless --resolver is passed.',
     args: z.object({
       name: z.string().describe('ENS name (e.g. myname.eth)'),
       address: z.string().describe('Address to set'),
     }),
-    options: globalOptions.merge(
+    options: globalOptions.merge(resolverOption).merge(
       z.object({
         coinType: z.coerce
           .number()
@@ -75,56 +125,60 @@ export const setCommands = Cli.create('set', {
       }),
     ),
     env: globalEnv,
-    alias: { coinType: 'c', chainId: 'i' },
+    alias: { resolver: 'r', coinType: 'c', chainId: 'i' },
     async run(c) {
-      const { chain } = clientFromContext(c)
-      const resolverAddress = addresses[chain].resolver
-      const node = namehash(validateName(c.args.name))
+      const name = validateName(c.args.name)
+      const resolverAddress = await resolveTargetResolver(c, name)
+      const node = namehash(name)
       const coinType = resolveCoinType(c.options)
       const data = encodeSetAddr(node, c.args.address, coinType)
       return { to: resolverAddress, data, value: '0' }
     },
   })
   .command('text', {
-    description: 'Generate calldata to set a text record for an ENS name',
+    description:
+      'Generate calldata to set a text record for an ENS name. Resolves the target resolver via the Universal Resolver unless --resolver is passed.',
     args: z.object({
       name: z.string().describe('ENS name (e.g. myname.eth)'),
       key: z.string().describe('Text record key (e.g. com.twitter, url)'),
       value: z.string().describe('Text record value'),
     }),
-    options: globalOptions,
+    options: globalOptions.merge(resolverOption),
     env: globalEnv,
+    alias: { resolver: 'r' },
     async run(c) {
-      const { chain } = clientFromContext(c)
-      const resolverAddress = addresses[chain].resolver
-      const node = namehash(validateName(c.args.name))
+      const name = validateName(c.args.name)
+      const resolverAddress = await resolveTargetResolver(c, name)
+      const node = namehash(name)
       const data = encodeSetText(node, c.args.key, c.args.value)
       return { to: resolverAddress, data, value: '0' }
     },
   })
   .command('contenthash', {
-    description: 'Generate calldata to set the content hash for an ENS name',
+    description:
+      'Generate calldata to set the content hash for an ENS name. Resolves the target resolver via the Universal Resolver unless --resolver is passed.',
     args: z.object({
       name: z.string().describe('ENS name (e.g. myname.eth)'),
       hash: z.string().describe('Content hash in hex (EIP-1577 encoded)'),
     }),
-    options: globalOptions,
+    options: globalOptions.merge(resolverOption),
     env: globalEnv,
+    alias: { resolver: 'r' },
     async run(c) {
-      const { chain } = clientFromContext(c)
-      const resolverAddress = addresses[chain].resolver
-      const node = namehash(validateName(c.args.name))
+      const name = validateName(c.args.name)
+      const resolverAddress = await resolveTargetResolver(c, name)
+      const node = namehash(name)
       const data = encodeSetContenthash(node, c.args.hash)
       return { to: resolverAddress, data, value: '0' }
     },
   })
   .command('batch', {
     description:
-      'Generate multicall calldata to set multiple records in a single transaction. Pass a JSON array of operations.',
+      'Generate multicall calldata to set multiple records in a single transaction. Pass a JSON array of operations. Resolves the target resolver via the Universal Resolver unless --resolver is passed.',
     args: z.object({
       name: z.string().describe('ENS name (e.g. myname.eth)'),
     }),
-    options: globalOptions.merge(
+    options: globalOptions.merge(resolverOption).merge(
       z.object({
         data: z
           .string()
@@ -134,10 +188,11 @@ export const setCommands = Cli.create('set', {
       }),
     ),
     env: globalEnv,
+    alias: { resolver: 'r' },
     async run(c) {
-      const { chain } = clientFromContext(c)
-      const resolverAddress = addresses[chain].resolver
-      const node = namehash(validateName(c.args.name))
+      const name = validateName(c.args.name)
+      const resolverAddress = await resolveTargetResolver(c, name)
+      const node = namehash(name)
       const operations: BatchOperation[] = JSON.parse(c.options.data)
       const calls = operations.map((op) => encodeBatchOperation(node, op))
 

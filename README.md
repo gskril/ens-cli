@@ -127,7 +127,7 @@ Options: `--resolver` (defaults to chain public resolver), `--fuses` and `--expi
 
 ### Setting Records
 
-All set commands output calldata JSON targeting the public resolver.
+All set commands output calldata JSON. The target resolver is read from the Universal Resolver by default — the name must already have a resolver set, otherwise the command errors. Pass `--resolver <address>` to override.
 
 ```sh
 # Set address record
