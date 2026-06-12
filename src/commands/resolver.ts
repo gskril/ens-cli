@@ -73,99 +73,100 @@ function computeProxyAddress(opts: {
 
 export const resolverCommands = Cli.create('resolver', {
   description: 'ENSv2 resolver utilities',
-}).command('deploy', {
-  description:
-    'Generate calldata to deploy a per-account permissioned resolver via the ENSv2 VerifiableFactory. The resolver address is determined by (factory, proxyLogic, deployer, salt) and must be deployed from the deployer address. If a resolver already exists at the predicted address, returns alreadyDeployed=true with no transaction needed.',
-  args: z.object({
-    deployer: z
-      .string()
-      .describe(
-        'Address that will send the deployment transaction. The resolver address depends on this — sending from a different account produces a different resolver.',
-      ),
-  }),
-  options: globalOptions.merge(
-    z.object({
-      admin: z
-        .string()
-        .optional()
-        .describe('Admin address granted role bitmap on the resolver (default: deployer)'),
-      salt: z
-        .string()
-        .optional()
-        .describe(
-          'CREATE2 salt as decimal or 0x hex (default: keccak256("ens-v2-resolver:<deployer>"))',
-        ),
-      roleBitmap: z
-        .string()
-        .optional()
-        .describe('Role bitmap granted to the admin as decimal or 0x hex (default: 0x1111…1111)'),
-    }),
-  ),
-  env: globalEnv,
-  alias: { admin: 'a', salt: 's' },
-  async run(c) {
-    const { client, chain } = clientFromContext(c)
-    const v2Deployment = v2DeploymentForChain(chain)
-    if (!v2Deployment) {
-      throw new Error(`ENSv2 resolver deployment is not configured for chain "${chain}"`)
-    }
-
-    const deployer = c.args.deployer as `0x${string}`
-    const admin = (c.options.admin ?? deployer) as `0x${string}`
-    const salt = parseSalt(c.options.salt, deployer)
-    const roleBitmap = parseRoleBitmap(c.options.roleBitmap)
-
-    const initializeData = encodeFunctionData({
-      abi: permissionedResolverAbi,
-      functionName: 'initialize',
-      args: [admin, roleBitmap],
-    })
-    const data = encodeFunctionData({
-      abi: verifiableFactoryAbi,
-      functionName: 'deployProxy',
-      args: [v2Deployment.resolverImplementation, salt, initializeData],
-    })
-    const proxy = computeProxyAddress({
-      factory: v2Deployment.resolverFactory,
-      proxyLogic: v2Deployment.resolverProxyLogic,
-      deployer,
-      salt,
-    })
-
-    const code = await client.getCode({ address: proxy.address })
-    const alreadyDeployed = isHex(code) && code !== '0x'
-
-    return {
-      to: v2Deployment.resolverFactory,
-      data,
-      value: '0',
-      resolver: proxy.address,
-      alreadyDeployed,
-      chain,
-      factory: v2Deployment.resolverFactory,
-      implementation: v2Deployment.resolverImplementation,
-      proxyLogic: v2Deployment.resolverProxyLogic,
-      deployer,
-      admin,
-      salt: salt.toString(),
-      saltHex: toHex(salt, { size: 32 }),
-      outerSalt: proxy.outerSalt,
-      roleBitmap: roleBitmap.toString(),
-      roleBitmapHex: toHex(roleBitmap, { size: 32 }),
-      initializeData,
-      nextSteps: alreadyDeployed
-        ? [
-            `Resolver already deployed at ${proxy.address}. No transaction needed.`,
-            `Pass it as --resolver ${proxy.address} when running ens register.`,
-          ]
-        : [
-            `1. Broadcast this transaction from ${deployer}`,
-            `2. Confirm the resolver is live at ${proxy.address}`,
-            `3. Pass it as --resolver ${proxy.address} when running ens register`,
-          ],
-    }
-  },
 })
+  .command('deploy', {
+    description:
+      'Generate calldata to deploy a per-account permissioned resolver via the ENSv2 VerifiableFactory. The resolver address is determined by (factory, proxyLogic, deployer, salt) and must be deployed from the deployer address. If a resolver already exists at the predicted address, returns alreadyDeployed=true with no transaction needed.',
+    args: z.object({
+      deployer: z
+        .string()
+        .describe(
+          'Address that will send the deployment transaction. The resolver address depends on this — sending from a different account produces a different resolver.',
+        ),
+    }),
+    options: globalOptions.merge(
+      z.object({
+        admin: z
+          .string()
+          .optional()
+          .describe('Admin address granted role bitmap on the resolver (default: deployer)'),
+        salt: z
+          .string()
+          .optional()
+          .describe(
+            'CREATE2 salt as decimal or 0x hex (default: keccak256("ens-v2-resolver:<deployer>"))',
+          ),
+        roleBitmap: z
+          .string()
+          .optional()
+          .describe('Role bitmap granted to the admin as decimal or 0x hex (default: 0x1111…1111)'),
+      }),
+    ),
+    env: globalEnv,
+    alias: { admin: 'a', salt: 's' },
+    async run(c) {
+      const { client, chain } = clientFromContext(c)
+      const v2Deployment = v2DeploymentForChain(chain)
+      if (!v2Deployment) {
+        throw new Error(`ENSv2 resolver deployment is not configured for chain "${chain}"`)
+      }
+
+      const deployer = c.args.deployer as `0x${string}`
+      const admin = (c.options.admin ?? deployer) as `0x${string}`
+      const salt = parseSalt(c.options.salt, deployer)
+      const roleBitmap = parseRoleBitmap(c.options.roleBitmap)
+
+      const initializeData = encodeFunctionData({
+        abi: permissionedResolverAbi,
+        functionName: 'initialize',
+        args: [admin, roleBitmap],
+      })
+      const data = encodeFunctionData({
+        abi: verifiableFactoryAbi,
+        functionName: 'deployProxy',
+        args: [v2Deployment.resolverImplementation, salt, initializeData],
+      })
+      const proxy = computeProxyAddress({
+        factory: v2Deployment.resolverFactory,
+        proxyLogic: v2Deployment.resolverProxyLogic,
+        deployer,
+        salt,
+      })
+
+      const code = await client.getCode({ address: proxy.address })
+      const alreadyDeployed = isHex(code) && code !== '0x'
+
+      return {
+        to: v2Deployment.resolverFactory,
+        data,
+        value: '0',
+        resolver: proxy.address,
+        alreadyDeployed,
+        chain,
+        factory: v2Deployment.resolverFactory,
+        implementation: v2Deployment.resolverImplementation,
+        proxyLogic: v2Deployment.resolverProxyLogic,
+        deployer,
+        admin,
+        salt: salt.toString(),
+        saltHex: toHex(salt, { size: 32 }),
+        outerSalt: proxy.outerSalt,
+        roleBitmap: roleBitmap.toString(),
+        roleBitmapHex: toHex(roleBitmap, { size: 32 }),
+        initializeData,
+        nextSteps: alreadyDeployed
+          ? [
+              `Resolver already deployed at ${proxy.address}. No transaction needed.`,
+              `Pass it as --resolver ${proxy.address} when running ens register.`,
+            ]
+          : [
+              `1. Broadcast this transaction from ${deployer}`,
+              `2. Confirm the resolver is live at ${proxy.address}`,
+              `3. Pass it as --resolver ${proxy.address} when running ens register`,
+            ],
+      }
+    },
+  })
   .command('set', {
     description:
       'Generate calldata to change the resolver of an existing ENS name. Auto-routes between the v2 registry, the v1 NameWrapper (for wrapped names), and the v1 ENS registry (for unwrapped names).',
