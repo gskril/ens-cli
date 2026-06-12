@@ -41,3 +41,14 @@ export async function isV2Active(c: Context, universalResolverAddress: `0x${stri
     return { isV2: false } as const
   }
 }
+
+export function v2DeploymentForChain(chain: Chain) {
+  const chainAddresses = addresses[chain] as (typeof addresses)[Chain] & {
+    v2?: {
+      registry: `0x${string}`
+      registrar: `0x${string}`
+      paymentToken: `0x${string}`
+    }
+  }
+  return chainAddresses.v2
+}

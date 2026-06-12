@@ -91,6 +91,68 @@ export const ethRegistrarControllerAbi = [
   },
 ] as const
 
+export const ethRegistrarAbi = [
+  {
+    name: 'commit',
+    type: 'function',
+    stateMutability: 'nonpayable',
+    inputs: [{ name: 'commitment', type: 'bytes32' }],
+    outputs: [],
+  },
+  {
+    name: 'register',
+    type: 'function',
+    stateMutability: 'nonpayable',
+    inputs: [
+      { name: 'label', type: 'string' },
+      { name: 'owner', type: 'address' },
+      { name: 'secret', type: 'bytes32' },
+      { name: 'subregistry', type: 'address' },
+      { name: 'resolver', type: 'address' },
+      { name: 'duration', type: 'uint64' },
+      { name: 'paymentToken', type: 'address' },
+      { name: 'referrer', type: 'bytes32' },
+    ],
+    outputs: [{ name: 'tokenId', type: 'uint256' }],
+  },
+  {
+    name: 'getRegisterPrice',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [
+      { name: 'label', type: 'string' },
+      { name: 'duration', type: 'uint64' },
+      { name: 'paymentToken', type: 'address' },
+    ],
+    outputs: [
+      { name: 'base', type: 'uint256' },
+      { name: 'premium', type: 'uint256' },
+    ],
+  },
+  {
+    name: 'isAvailable',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [{ name: 'label', type: 'string' }],
+    outputs: [{ name: '', type: 'bool' }],
+  },
+  {
+    name: 'makeCommitment',
+    type: 'function',
+    stateMutability: 'pure',
+    inputs: [
+      { name: 'label', type: 'string' },
+      { name: 'owner', type: 'address' },
+      { name: 'secret', type: 'bytes32' },
+      { name: 'subregistry', type: 'address' },
+      { name: 'resolver', type: 'address' },
+      { name: 'duration', type: 'uint64' },
+      { name: 'referrer', type: 'bytes32' },
+    ],
+    outputs: [{ name: '', type: 'bytes32' }],
+  },
+] as const
+
 export const publicResolverAbi = [
   {
     name: 'setAddr',
@@ -192,6 +254,11 @@ export const addresses = {
     resolver: '0xE99638b40E4Fff0129D56f03b55b6bbC4BBE49b5' as const,
     universalResolver: '0xeEeEEEeE14D718C2B47D9923Deab1335E144EeEe' as const,
     nameWrapper: '0x0635513f179D50A207757E05759CbD106d7dFcE8' as const,
+    v2: {
+      registry: '0xDEDB92913A25abE1f7BCDD85D8A344a43B398B67' as const,
+      registrar: '0x8c2E866B439358c41AE05De9cbE8A00BFEFafFcA' as const,
+      paymentToken: '0x3DfC8b53dAFa5eBbb071a8B97678Ab534Ed838D9' as const,
+    },
   },
 } as const
 

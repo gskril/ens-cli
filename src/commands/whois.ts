@@ -31,7 +31,7 @@ function getExpiryDetails(name: string, expiry: bigint) {
   }
 
   return {
-    expiry,
+    expiry: expiry.toString(),
     expiryDate: new Date(Number(expiry) * 1000).toISOString(),
   }
 }
@@ -87,8 +87,8 @@ export const whoisCommand = {
         status: mapStatus(status),
         ...getExpiryDetails(name, expiry),
         latestOwner: toNullableAddress(latestOwner),
-        tokenId,
-        resource,
+        tokenId: tokenId.toString(),
+        resource: resource.toString(),
       }
     }
 

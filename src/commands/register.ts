@@ -1,11 +1,18 @@
 import { Cli, z } from 'incur'
 import { encodeFunctionData, toHex } from 'viem/utils'
-import { ethRegistrarControllerAbi, addresses } from '../lib/contracts.ts'
-import { globalOptions, globalEnv, clientFromContext } from '../lib/context.ts'
+import { ethRegistrarAbi, ethRegistrarControllerAbi, addresses } from '../lib/contracts.ts'
+import {
+  globalOptions,
+  globalEnv,
+  clientFromContext,
+  isV2Active,
+  v2DeploymentForChain,
+} from '../lib/context.ts'
 import { extractLabel } from '../lib/utils.ts'
 
 const ONE_YEAR = 31536000n
 const ZERO_BYTES32 = '0x0000000000000000000000000000000000000000000000000000000000000000' as const
+const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000' as const
 
 function generateSecret(): `0x${string}` {
   const bytes = new Uint8Array(32)
@@ -64,7 +71,18 @@ export const registerCommands = Cli.create('register', {
         resolver: z
           .string()
           .optional()
-          .describe('Resolver address (defaults to chain public resolver)'),
+          .describe(
+            'Resolver address (defaults to chain public resolver on ENSv1, zero address on ENSv2)',
+          ),
+        subregistry: z
+          .string()
+          .optional()
+          .describe('ENSv2 initial subregistry address (default: zero address)'),
+        paymentToken: z
+          .string()
+          .optional()
+          .describe('ENSv2 ERC-20 payment token (default: chain v2 payment token)'),
+        referrer: z.string().optional().describe('Referrer bytes32 hex (default: zero bytes32)'),
         reverseRecord: z.boolean().optional().describe('Set reverse record (default: false)'),
       }),
     ),
@@ -72,11 +90,60 @@ export const registerCommands = Cli.create('register', {
     alias: { duration: 'd', secret: 's', resolver: 'r' },
     async run(c) {
       const { client, chain } = clientFromContext(c)
-      const controllerAddress = addresses[chain].controller
       const label = extractLabel(c.args.name)
       const owner = c.args.owner as `0x${string}`
       const duration = c.options.duration != null ? BigInt(c.options.duration) : ONE_YEAR
       const secret = (c.options.secret ?? generateSecret()) as `0x${string}`
+      const { isV2 } = await isV2Active(c, c.options.universalResolver as `0x${string}` | undefined)
+      const v2Deployment = isV2 ? v2DeploymentForChain(chain) : undefined
+
+      if (v2Deployment) {
+        const subregistry = (c.options.subregistry ?? ZERO_ADDRESS) as `0x${string}`
+        const resolver = (c.options.resolver ?? ZERO_ADDRESS) as `0x${string}`
+        const paymentToken = (c.options.paymentToken ?? v2Deployment.paymentToken) as `0x${string}`
+        const referrer = (c.options.referrer ?? ZERO_BYTES32) as `0x${string}`
+
+        const commitment = await client.readContract({
+          address: v2Deployment.registrar,
+          abi: ethRegistrarAbi,
+          functionName: 'makeCommitment',
+          args: [label, owner, secret, subregistry, resolver, duration, referrer],
+        })
+
+        const data = encodeFunctionData({
+          abi: ethRegistrarAbi,
+          functionName: 'commit',
+          args: [commitment],
+        })
+
+        return {
+          to: v2Deployment.registrar,
+          data,
+          value: '0',
+          secret,
+          commitment,
+          name: c.args.name,
+          label,
+          owner,
+          duration: duration.toString(),
+          resolver,
+          subregistry,
+          paymentToken,
+          referrer,
+          registry: v2Deployment.registry,
+          registrar: v2Deployment.registrar,
+          version: 'v2',
+          nextSteps: [
+            '1. Broadcast this commit transaction',
+            '2. Wait at least 60 seconds after the tx is mined',
+            `3. Run: ens price ${c.args.name} --chain ${chain} --paymentToken ${paymentToken}`,
+            `4. Approve ${v2Deployment.registrar} to spend the total ERC-20 price`,
+            `5. Run: ens register reveal ${c.args.name} ${c.args.owner} --chain ${chain} --secret ${secret} --paymentToken ${paymentToken}`,
+          ],
+        }
+      }
+
+      const controllerAddress = addresses[chain].controller
       const resolver = (c.options.resolver ?? addresses[chain].resolver) as `0x${string}`
       const reverseRecord = c.options.reverseRecord ?? false
 
@@ -135,26 +202,74 @@ export const registerCommands = Cli.create('register', {
         secret: z.string().describe('Secret from the commit step (required)'),
         value: z
           .string()
+          .optional()
           .describe(
-            'ETH value in wei to send (use bufferedTotal from ens price, fetched immediately before this step)',
+            'ENSv1 ETH value in wei to send (use bufferedTotal from ens price, fetched immediately before this step)',
           ),
         duration: z.coerce
           .number()
           .optional()
           .describe('Registration duration in seconds (must match commit)'),
         resolver: z.string().optional().describe('Resolver address (must match commit)'),
+        subregistry: z
+          .string()
+          .optional()
+          .describe('ENSv2 initial subregistry address (must match commit)'),
+        paymentToken: z
+          .string()
+          .optional()
+          .describe('ENSv2 ERC-20 payment token (must be approved before reveal)'),
+        referrer: z.string().optional().describe('Referrer bytes32 hex (must match commit)'),
         reverseRecord: z.boolean().optional().describe('Set reverse record (must match commit)'),
       }),
     ),
     env: globalEnv,
-    alias: { duration: 'd', secret: 's', resolver: 'r', value: 'v' },
+    alias: { duration: 'd', secret: 's', resolver: 'r', value: 'v', paymentToken: 'p' },
     async run(c) {
       const { chain } = clientFromContext(c)
-      const controllerAddress = addresses[chain].controller
       const label = extractLabel(c.args.name)
       const owner = c.args.owner as `0x${string}`
       const duration = c.options.duration != null ? BigInt(c.options.duration) : ONE_YEAR
       const secret = c.options.secret as `0x${string}`
+      const { isV2 } = await isV2Active(c, c.options.universalResolver as `0x${string}` | undefined)
+      const v2Deployment = isV2 ? v2DeploymentForChain(chain) : undefined
+
+      if (v2Deployment) {
+        const subregistry = (c.options.subregistry ?? ZERO_ADDRESS) as `0x${string}`
+        const resolver = (c.options.resolver ?? ZERO_ADDRESS) as `0x${string}`
+        const paymentToken = (c.options.paymentToken ?? v2Deployment.paymentToken) as `0x${string}`
+        const referrer = (c.options.referrer ?? ZERO_BYTES32) as `0x${string}`
+
+        const data = encodeFunctionData({
+          abi: ethRegistrarAbi,
+          functionName: 'register',
+          args: [label, owner, secret, subregistry, resolver, duration, paymentToken, referrer],
+        })
+
+        return {
+          to: v2Deployment.registrar,
+          data,
+          value: '0',
+          name: c.args.name,
+          label,
+          owner,
+          duration: duration.toString(),
+          resolver,
+          subregistry,
+          paymentToken,
+          referrer,
+          registry: v2Deployment.registry,
+          registrar: v2Deployment.registrar,
+          version: 'v2',
+          note: `Approve ${v2Deployment.registrar} to spend the ERC-20 total from ens price before broadcasting this transaction.`,
+        }
+      }
+
+      if (c.options.value == null) {
+        throw new Error('ENSv1 reveal requires --value <bufferedTotal from ens price>')
+      }
+
+      const controllerAddress = addresses[chain].controller
       const resolver = (c.options.resolver ?? addresses[chain].resolver) as `0x${string}`
       const reverseRecord = c.options.reverseRecord ?? false
 
