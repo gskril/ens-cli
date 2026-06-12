@@ -1,6 +1,6 @@
 import { Cli } from 'incur'
 import packageJson from '../package.json'
-import { resolveCommand, reverseCommand, textCommand, avatarCommand } from './commands/resolve.ts'
+import { getCommands } from './commands/get.ts'
 import { availableCommand } from './commands/available.ts'
 import { priceCommand } from './commands/price.ts'
 import { registerCommands } from './commands/register.ts'
@@ -18,10 +18,7 @@ export const cli = Cli.create('ens', {
   },
 })
   // Resolution
-  .command(resolveCommand)
-  .command(reverseCommand)
-  .command(textCommand)
-  .command(avatarCommand)
+  .command(getCommands)
   // Queries
   .command(availableCommand)
   .command(priceCommand)

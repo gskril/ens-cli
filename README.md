@@ -33,18 +33,18 @@ npx clear-npx-cache
 
 ```sh
 # Forward resolve a name to an address
-ens resolve vitalik.eth
-ens resolve vitalik.eth --coin-type 0  # BTC address
+ens get address vitalik.eth
+ens get address vitalik.eth --coin-type 0  # BTC address
 
 # Reverse resolve an address to a name
-ens reverse 0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045
+ens get name 0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045
 
 # Get a text record
-ens text vitalik.eth url
-ens text vitalik.eth com.twitter
+ens get text vitalik.eth url
+ens get text vitalik.eth com.twitter
 
 # Get avatar URL
-ens avatar vitalik.eth
+ens get avatar vitalik.eth
 
 # Show owner, resolver, and expiry for a .eth name
 ens whois vitalik.eth
@@ -171,15 +171,15 @@ ens set batch myname.eth --data '[
 **Chain selection:**
 
 ```sh
-ens resolve vitalik.eth --chain mainnet  # default
-ens resolve vitalik.eth --chain sepolia
+ens get address vitalik.eth --chain mainnet  # default
+ens get address vitalik.eth --chain sepolia
 ```
 
 **Output format:**
 
 ```sh
-ens resolve vitalik.eth --json
-ens resolve vitalik.eth --format yaml
+ens get address vitalik.eth --json
+ens get address vitalik.eth --format yaml
 ```
 
 ## Agent Integration
