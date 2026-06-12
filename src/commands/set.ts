@@ -1,48 +1,46 @@
 import { Cli, z } from 'incur'
-import { encodeFunctionData } from 'viem/utils'
+import { zeroAddress } from 'viem'
+import { encodeFunctionData, getAddress } from 'viem/utils'
 import { getEnsResolver, namehash } from 'viem/ens'
-import { validateName } from '../lib/utils.ts'
+import { validateName, asHex } from '../lib/utils.ts'
 import { publicResolverAbi } from '../lib/contracts.ts'
-import { globalOptions, globalEnv, clientFromContext } from '../lib/context.ts'
-import { resolveCoinType } from '../lib/cointype.ts'
+import {
+  globalOptions,
+  globalEnv,
+  clientFromContext,
+  universalResolverParam,
+  type Context,
+} from '../lib/context.ts'
+import { coinTypeOptions, resolveCoinType } from '../lib/cointype.ts'
 
-const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000' as const
+const batchOperationSchema = z.discriminatedUnion('type', [
+  z.object({
+    type: z.literal('address'),
+    address: z.string(),
+    coinType: z.number().optional(),
+    chainId: z.number().optional(),
+  }),
+  z.object({ type: z.literal('text'), key: z.string(), value: z.string() }),
+  z.object({ type: z.literal('contenthash'), hash: z.string() }),
+])
 
-type BatchOperation =
-  | { type: 'address'; address: string; coinType?: number; chainId?: number }
-  | { type: 'text'; key: string; value: string }
-  | { type: 'contenthash'; hash: string }
+type BatchOperation = z.infer<typeof batchOperationSchema>
 
-type ResolveResolverContext = {
-  options: {
-    resolver?: string
-    universalResolver?: string
-    rpc?: string
-    chain?: string
-  }
-  env: { ETH_RPC_URL?: string }
-}
+type SetContext = Context & { options: { resolver?: string } }
 
-async function resolveTargetResolver(
-  c: ResolveResolverContext,
-  name: string,
-): Promise<`0x${string}`> {
-  if (c.options.resolver) return c.options.resolver as `0x${string}`
+async function resolveTargetResolver(c: SetContext, name: string): Promise<`0x${string}`> {
+  if (c.options.resolver) return getAddress(c.options.resolver)
 
   const { client } = clientFromContext(c)
-  const universalResolverAddress = c.options.universalResolver as `0x${string}` | undefined
 
   let resolver: `0x${string}` | null = null
   try {
-    resolver = await getEnsResolver(client, {
-      name,
-      ...(universalResolverAddress ? { universalResolverAddress } : {}),
-    })
+    resolver = await getEnsResolver(client, { name, ...universalResolverParam(c) })
   } catch {
     // Universal Resolver lookup failed — fall through to the no-resolver error
   }
 
-  if (!resolver || resolver === ZERO_ADDRESS) {
+  if (!resolver || resolver === zeroAddress) {
     throw new Error(
       `No resolver set for "${name}". Pass --resolver <address> to target a specific resolver, or set one on the registry first.`,
     )
@@ -56,13 +54,13 @@ function encodeSetAddr(node: `0x${string}`, address: string, coinType?: number):
     return encodeFunctionData({
       abi: publicResolverAbi,
       functionName: 'setAddr',
-      args: [node, BigInt(coinType), address as `0x${string}`],
+      args: [node, BigInt(coinType), asHex(address, 'address')],
     })
   }
   return encodeFunctionData({
     abi: publicResolverAbi,
     functionName: 'setAddr',
-    args: [node, address as `0x${string}`],
+    args: [node, getAddress(address)],
   })
 }
 
@@ -78,7 +76,7 @@ function encodeSetContenthash(node: `0x${string}`, hash: string): `0x${string}` 
   return encodeFunctionData({
     abi: publicResolverAbi,
     functionName: 'setContenthash',
-    args: [node, hash as `0x${string}`],
+    args: [node, asHex(hash, 'contenthash')],
   })
 }
 
@@ -112,18 +110,7 @@ export const setCommands = Cli.create('set', {
       name: z.string().describe('ENS name (e.g. myname.eth)'),
       address: z.string().describe('Address to set'),
     }),
-    options: globalOptions.merge(resolverOption).merge(
-      z.object({
-        coinType: z.coerce
-          .number()
-          .optional()
-          .describe('ENSIP-9 coin type (e.g. 0 for BTC, 60 for ETH)'),
-        chainId: z.coerce
-          .number()
-          .optional()
-          .describe('EVM chain ID — auto-converts to ENSIP-9 coin type (e.g. 10 for Optimism)'),
-      }),
-    ),
+    options: globalOptions.merge(resolverOption).merge(coinTypeOptions),
     env: globalEnv,
     alias: { resolver: 'r', coinType: 'c', chainId: 'i' },
     async run(c) {
@@ -193,7 +180,7 @@ export const setCommands = Cli.create('set', {
       const name = validateName(c.args.name)
       const resolverAddress = await resolveTargetResolver(c, name)
       const node = namehash(name)
-      const operations: BatchOperation[] = JSON.parse(c.options.data)
+      const operations = z.array(batchOperationSchema).parse(JSON.parse(c.options.data))
       const calls = operations.map((op) => encodeBatchOperation(node, op))
 
       const data = encodeFunctionData({

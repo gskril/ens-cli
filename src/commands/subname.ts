@@ -1,11 +1,11 @@
 import { Cli, z } from 'incur'
-import { encodeFunctionData, isAddressEqual } from 'viem/utils'
+import { zeroAddress } from 'viem'
+import { encodeFunctionData, getAddress, isAddressEqual } from 'viem/utils'
 import { labelhash, namehash } from 'viem/ens'
 import { addresses, ensRegistryAbi, nameWrapperAbi } from '../lib/contracts.ts'
 import { globalOptions, globalEnv, clientFromContext } from '../lib/context.ts'
 import { validateName } from '../lib/utils.ts'
 
-const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000' as const
 const TTL = 0n
 
 function splitSubname(name: string): { label: string; parent: string } {
@@ -64,14 +64,14 @@ export const subnameCommands = Cli.create('subname', {
       args: [parentNode],
     })
 
-    if (parentRegistryOwner === ZERO_ADDRESS) {
+    if (parentRegistryOwner === zeroAddress) {
       throw new Error(
         `Parent "${parent}" has no owner in the ENS registry, so a subname cannot be created via onchain contracts.`,
       )
     }
 
-    const owner = c.args.owner as `0x${string}`
-    const resolver = (c.options.resolver ?? addresses[chain].resolver) as `0x${string}`
+    const owner = getAddress(c.args.owner)
+    const resolver = c.options.resolver ? getAddress(c.options.resolver) : addresses[chain].resolver
     const labelHash = labelhash(label)
     const node = namehash(name)
     const isWrapped = isAddressEqual(parentRegistryOwner, nameWrapperAddress)
@@ -84,7 +84,7 @@ export const subnameCommands = Cli.create('subname', {
         args: [BigInt(parentNode)],
       })
 
-      if (wrappedOwner === ZERO_ADDRESS) {
+      if (wrappedOwner === zeroAddress) {
         throw new Error(
           `Parent "${parent}" is owned by the NameWrapper but has no wrapped owner (likely expired). A subname cannot be created.`,
         )
@@ -102,6 +102,7 @@ export const subnameCommands = Cli.create('subname', {
       return {
         to: nameWrapperAddress,
         data,
+        value: '0',
         name,
         parent,
         label,
@@ -128,6 +129,7 @@ export const subnameCommands = Cli.create('subname', {
     return {
       to: registryAddress,
       data,
+      value: '0',
       name,
       parent,
       label,

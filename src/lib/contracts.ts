@@ -206,7 +206,6 @@ export const publicResolverAbi = [
 ] as const
 
 export const baseRegistrarAbi = parseAbi([
-  'function controllers(address) external view returns (bool)',
   'function nameExpires(uint256 id) external view returns (uint256)',
 ])
 
@@ -214,13 +213,10 @@ export const ensRegistryAbi = parseAbi([
   'function owner(bytes32 node) external view returns (address)',
   'function resolver(bytes32 node) external view returns (address)',
   'function setResolver(bytes32 node, address resolver) external',
-  'function setSubnodeOwner(bytes32 node, bytes32 label, address owner) external returns (bytes32)',
   'function setSubnodeRecord(bytes32 node, bytes32 label, address owner, address resolver, uint64 ttl) external',
 ])
 
 export const universalResolverAbi = parseAbi([
-  'function supportsInterface(bytes4 interfaceId) external view returns (bool)',
-  'function findExactRegistry(bytes name) external view returns (address)',
   'function findCanonicalRegistry(bytes name) external view returns (address)',
   'function findResolver(bytes name) external view returns ((address resolver, bytes32 node, uint256 offset))',
   'error DNSDecodingFailed(bytes dns)',
@@ -236,8 +232,6 @@ export const v2RegistryAbi = parseAbi([
 
 export const verifiableFactoryAbi = parseAbi([
   'function deployProxy(address implementation, uint256 salt, bytes data) external returns (address)',
-  'function proxyLogic() external view returns (address)',
-  'function verifyContract(address proxy, address implementation) external view returns (bool)',
 ])
 
 export const permissionedResolverAbi = parseAbi([
@@ -247,33 +241,32 @@ export const permissionedResolverAbi = parseAbi([
 export const nameWrapperAbi = parseAbi([
   'function ownerOf(uint256 id) external view returns (address)',
   'function setResolver(bytes32 node, address resolver) external',
-  'function setSubnodeOwner(bytes32 parentNode, string label, address owner, uint32 fuses, uint64 expiry) external returns (bytes32)',
   'function setSubnodeRecord(bytes32 parentNode, string label, address owner, address resolver, uint64 ttl, uint32 fuses, uint64 expiry) external returns (bytes32)',
 ])
 
 export const addresses = {
   mainnet: {
-    registry: '0x00000000000C2E074eC69A0dFb2997BA6C7d2e1e' as const,
-    baseRegistrar: '0x57f1887a8BF19b14fC0dF6Fd9B2acc9Af147eA85' as const,
-    controller: '0x59E16fcCd424Cc24e280Be16E11Bcd56fb0CE547' as const,
-    resolver: '0xF29100983E058B709F3D539b0c765937B804AC15' as const,
-    universalResolver: '0xeEeEEEeE14D718C2B47D9923Deab1335E144EeEe' as const,
-    nameWrapper: '0xD4416b13d2b3a9aBae7AcD5D6C2BbDBE25686401' as const,
+    registry: '0x00000000000C2E074eC69A0dFb2997BA6C7d2e1e',
+    baseRegistrar: '0x57f1887a8BF19b14fC0dF6Fd9B2acc9Af147eA85',
+    controller: '0x59E16fcCd424Cc24e280Be16E11Bcd56fb0CE547',
+    resolver: '0xF29100983E058B709F3D539b0c765937B804AC15',
+    universalResolver: '0xeEeEEEeE14D718C2B47D9923Deab1335E144EeEe',
+    nameWrapper: '0xD4416b13d2b3a9aBae7AcD5D6C2BbDBE25686401',
   },
   sepolia: {
-    registry: '0x00000000000C2E074eC69A0dFb2997BA6C7d2e1e' as const,
-    baseRegistrar: '0x57f1887a8BF19b14fC0dF6Fd9B2acc9Af147eA85' as const,
-    controller: '0xfb3cE5D01e0f33f41DbB39035dB9745962F1f968' as const,
-    resolver: '0xE99638b40E4Fff0129D56f03b55b6bbC4BBE49b5' as const,
-    universalResolver: '0xeEeEEEeE14D718C2B47D9923Deab1335E144EeEe' as const,
-    nameWrapper: '0x0635513f179D50A207757E05759CbD106d7dFcE8' as const,
+    registry: '0x00000000000C2E074eC69A0dFb2997BA6C7d2e1e',
+    baseRegistrar: '0x57f1887a8BF19b14fC0dF6Fd9B2acc9Af147eA85',
+    controller: '0xfb3cE5D01e0f33f41DbB39035dB9745962F1f968',
+    resolver: '0xE99638b40E4Fff0129D56f03b55b6bbC4BBE49b5',
+    universalResolver: '0xeEeEEEeE14D718C2B47D9923Deab1335E144EeEe',
+    nameWrapper: '0x0635513f179D50A207757E05759CbD106d7dFcE8',
     v2: {
-      registry: '0xDEDB92913A25abE1f7BCDD85D8A344a43B398B67' as const,
-      registrar: '0x8c2E866B439358c41AE05De9cbE8A00BFEFafFcA' as const,
-      paymentToken: '0x3DfC8b53dAFa5eBbb071a8B97678Ab534Ed838D9' as const,
-      resolverFactory: '0xd2A632D8A8b67C2c4398c255CBd7Af8Dd7236198' as const,
-      resolverImplementation: '0xdcE5205A553573FFd47629327DDdf36186022FfA' as const,
-      resolverProxyLogic: '0x917C561a74Df398646e06f3FFAA51DB8e8330C5A' as const,
+      registry: '0xDEDB92913A25abE1f7BCDD85D8A344a43B398B67',
+      registrar: '0x8c2E866B439358c41AE05De9cbE8A00BFEFafFcA',
+      paymentToken: '0x3DfC8b53dAFa5eBbb071a8B97678Ab534Ed838D9',
+      resolverFactory: '0xd2A632D8A8b67C2c4398c255CBd7Af8Dd7236198',
+      resolverImplementation: '0xdcE5205A553573FFd47629327DDdf36186022FfA',
+      resolverProxyLogic: '0x917C561a74Df398646e06f3FFAA51DB8e8330C5A',
     },
   },
 } as const

@@ -1,20 +1,18 @@
-import { z } from 'incur'
-import { validateName } from '../lib/utils.ts'
+import { Cli, z } from 'incur'
+import { getAddress } from 'viem/utils'
 import { getEnsAddress, getEnsName, getEnsText, getEnsAvatar, getEnsResolver } from 'viem/ens'
-import { globalOptions, globalEnv, clientFromContext } from '../lib/context.ts'
-import { resolveCoinType } from '../lib/cointype.ts'
-
-const coinTypeOptions = z.object({
-  coinType: z.coerce.number().optional().describe('ENSIP-9 coin type (e.g. 0 for BTC, 60 for ETH)'),
-  chainId: z.coerce
-    .number()
-    .optional()
-    .describe('EVM chain ID — auto-converts to ENSIP-9 coin type (e.g. 10 for Optimism)'),
-})
+import { validateName } from '../lib/utils.ts'
+import {
+  globalOptions,
+  globalEnv,
+  clientFromContext,
+  universalResolverParam,
+} from '../lib/context.ts'
+import { coinTypeOptions, resolveCoinType } from '../lib/cointype.ts'
 
 const resolveOptions = coinTypeOptions.merge(globalOptions)
 
-export const resolveCommand = {
+export const resolveCommand = Cli.create('resolve', {
   description: 'Resolve an ENS name to an address',
   args: z.object({
     name: z.string().describe('ENS name to resolve (e.g. vitalik.eth)'),
@@ -22,20 +20,18 @@ export const resolveCommand = {
   options: resolveOptions,
   env: globalEnv,
   alias: { coinType: 'c', chainId: 'i' },
-  async run(c: any) {
+  async run(c) {
     const { client } = clientFromContext(c)
     const name = validateName(c.args.name)
     const coinType = resolveCoinType(c.options)
-    const universalResolverAddress = c.options.universalResolver as `0x${string}` | undefined
-    const resolver = await getEnsResolver(client, {
-      name,
-      ...(universalResolverAddress ? { universalResolverAddress } : {}),
-    })
-    const address = await getEnsAddress(client, {
-      name,
-      ...(coinType != null ? { coinType: BigInt(coinType) } : {}),
-      ...(universalResolverAddress ? { universalResolverAddress } : {}),
-    })
+    const [resolver, address] = await Promise.all([
+      getEnsResolver(client, { name, ...universalResolverParam(c) }),
+      getEnsAddress(client, {
+        name,
+        ...(coinType != null ? { coinType: BigInt(coinType) } : {}),
+        ...universalResolverParam(c),
+      }),
+    ])
     return {
       name,
       resolver,
@@ -43,9 +39,9 @@ export const resolveCommand = {
       ...(coinType != null ? { coinType } : {}),
     }
   },
-}
+})
 
-export const reverseCommand = {
+export const reverseCommand = Cli.create('reverse', {
   description: 'Reverse resolve an address to an ENS name',
   args: z.object({
     address: z.string().describe('Ethereum address to reverse resolve'),
@@ -53,15 +49,14 @@ export const reverseCommand = {
   options: resolveOptions,
   env: globalEnv,
   alias: { coinType: 'c', chainId: 'i' },
-  async run(c: any) {
+  async run(c) {
     const { client } = clientFromContext(c)
-    const address = c.args.address as `0x${string}`
+    const address = getAddress(c.args.address)
     const coinType = resolveCoinType(c.options)
-    const universalResolverAddress = c.options.universalResolver as `0x${string}` | undefined
     const name = await getEnsName(client, {
       address,
       ...(coinType != null ? { coinType: BigInt(coinType) } : {}),
-      ...(universalResolverAddress ? { universalResolverAddress } : {}),
+      ...universalResolverParam(c),
     })
     return {
       address,
@@ -69,9 +64,9 @@ export const reverseCommand = {
       ...(coinType != null ? { coinType } : {}),
     }
   },
-}
+})
 
-export const textCommand = {
+export const textCommand = Cli.create('text', {
   description: 'Get a text record for an ENS name',
   args: z.object({
     name: z.string().describe('ENS name (e.g. vitalik.eth)'),
@@ -79,34 +74,32 @@ export const textCommand = {
   }),
   options: globalOptions,
   env: globalEnv,
-  async run(c: any) {
+  async run(c) {
     const { client } = clientFromContext(c)
     const name = validateName(c.args.name)
-    const universalResolverAddress = c.options.universalResolver as `0x${string}` | undefined
     const value = await getEnsText(client, {
       name,
       key: c.args.key,
-      ...(universalResolverAddress ? { universalResolverAddress } : {}),
+      ...universalResolverParam(c),
     })
     return { name, key: c.args.key, value }
   },
-}
+})
 
-export const avatarCommand = {
+export const avatarCommand = Cli.create('avatar', {
   description: 'Get the avatar URL for an ENS name',
   args: z.object({
     name: z.string().describe('ENS name (e.g. vitalik.eth)'),
   }),
   options: globalOptions,
   env: globalEnv,
-  async run(c: any) {
+  async run(c) {
     const { client } = clientFromContext(c)
     const name = validateName(c.args.name)
-    const universalResolverAddress = c.options.universalResolver as `0x${string}` | undefined
     const avatar = await getEnsAvatar(client, {
       name,
-      ...(universalResolverAddress ? { universalResolverAddress } : {}),
+      ...universalResolverParam(c),
     })
     return { name, avatar }
   },
-}
+})

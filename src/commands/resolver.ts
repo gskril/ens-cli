@@ -1,8 +1,10 @@
 import { Cli, z } from 'incur'
+import { zeroAddress } from 'viem'
 import {
   concat,
   encodeAbiParameters,
   encodeFunctionData,
+  getAddress,
   getContractAddress,
   isAddressEqual,
   isHex,
@@ -23,13 +25,13 @@ import {
   globalOptions,
   globalEnv,
   clientFromContext,
-  isV2Active,
+  activeV2Deployment,
   v2DeploymentForChain,
 } from '../lib/context.ts'
-import { validateName } from '../lib/utils.ts'
+import { validateName, eth2ldLabel } from '../lib/utils.ts'
 
-const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000' as const
-
+// ENSv2's EnhancedAccessControl packs each role into a 4-bit group, so a 1 in
+// every nibble grants the admin all roles (ALL_ROLES in the ENSv2 contracts).
 const DEFAULT_ROLE_BITMAP = BigInt(
   '0x1111111111111111111111111111111111111111111111111111111111111111',
 )
@@ -37,11 +39,6 @@ const DEFAULT_ROLE_BITMAP = BigInt(
 function parseSalt(salt: string | undefined, deployer: `0x${string}`): bigint {
   if (salt) return BigInt(salt)
   return BigInt(keccak256(stringToBytes(`ens-v2-resolver:${deployer.toLowerCase()}`)))
-}
-
-function parseRoleBitmap(value: string | undefined): bigint {
-  if (value == null) return DEFAULT_ROLE_BITMAP
-  return BigInt(value)
 }
 
 function computeProxyAddress(opts: {
@@ -53,6 +50,9 @@ function computeProxyAddress(opts: {
   const outerSalt = keccak256(
     encodeAbiParameters([{ type: 'address' }, { type: 'uint256' }], [opts.deployer, opts.salt]),
   )
+  // EIP-1167 minimal proxy creation code, except the runtime length byte is
+  // 0x4d (77) instead of 0x2d (45): the VerifiableFactory appends the 32-byte
+  // outer salt after the proxy runtime so deployments can be verified onchain.
   const bytecode = concat([
     '0x3d604d80600a3d3981f3363d3d373d3d3d363d73',
     opts.proxyLogic,
@@ -111,10 +111,10 @@ export const resolverCommands = Cli.create('resolver', {
         throw new Error(`ENSv2 resolver deployment is not configured for chain "${chain}"`)
       }
 
-      const deployer = c.args.deployer as `0x${string}`
-      const admin = (c.options.admin ?? deployer) as `0x${string}`
+      const deployer = getAddress(c.args.deployer)
+      const admin = c.options.admin ? getAddress(c.options.admin) : deployer
       const salt = parseSalt(c.options.salt, deployer)
-      const roleBitmap = parseRoleBitmap(c.options.roleBitmap)
+      const roleBitmap = c.options.roleBitmap ? BigInt(c.options.roleBitmap) : DEFAULT_ROLE_BITMAP
 
       const initializeData = encodeFunctionData({
         abi: permissionedResolverAbi,
@@ -179,17 +179,14 @@ export const resolverCommands = Cli.create('resolver', {
     async run(c) {
       const { client, chain } = clientFromContext(c)
       const name = validateName(c.args.name)
-      const resolver = c.args.resolver as `0x${string}`
-      const universalResolverAddress = c.options.universalResolver as `0x${string}` | undefined
-      const { isV2 } = await isV2Active(c, universalResolverAddress)
-      const v2Deployment = isV2 ? v2DeploymentForChain(chain) : undefined
+      const resolver = getAddress(c.args.resolver)
+      const v2Deployment = await activeV2Deployment(c)
 
       if (v2Deployment) {
-        const labels = name.split('.')
-        if (labels.length !== 2 || labels[1] !== 'eth') {
+        const label = eth2ldLabel(name)
+        if (label == null) {
           throw new Error('ENSv2 resolver set currently only supports 2LD .eth names')
         }
-        const label = labels[0]!
         const anyId = BigInt(labelhash(label))
 
         const { status, latestOwner, tokenId } = await client.readContract({
@@ -236,7 +233,7 @@ export const resolverCommands = Cli.create('resolver', {
         args: [node],
       })
 
-      if (registryOwner === ZERO_ADDRESS) {
+      if (registryOwner === zeroAddress) {
         throw new Error(
           `"${name}" has no owner in the ENS registry. A resolver cannot be set on an unowned name.`,
         )

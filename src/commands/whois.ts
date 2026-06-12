@@ -1,7 +1,14 @@
-import { z } from 'incur'
+import { Cli, z } from 'incur'
+import { zeroAddress } from 'viem'
 import { bytesToHex } from 'viem/utils'
 import { labelhash, namehash, packetToBytes } from 'viem/ens'
-import { globalOptions, globalEnv, clientFromContext, isV2Active } from '../lib/context.ts'
+import {
+  globalOptions,
+  globalEnv,
+  clientFromContext,
+  isV2Active,
+  universalResolverAddress,
+} from '../lib/context.ts'
 import {
   addresses,
   baseRegistrarAbi,
@@ -9,10 +16,9 @@ import {
   universalResolverAbi,
   v2RegistryAbi,
 } from '../lib/contracts.ts'
-import { validateName } from '../lib/utils.ts'
+import { validateName, eth2ldLabel } from '../lib/utils.ts'
 
 function toNullableAddress(value: `0x${string}`) {
-  const zeroAddress = '0x0000000000000000000000000000000000000000'
   return value === zeroAddress ? null : value
 }
 
@@ -22,62 +28,59 @@ function mapStatus(status: number | bigint) {
   return statusLabels[Number(status)] ?? 'UNKNOWN'
 }
 
-function getExpiryDetails(name: string, expiry: bigint) {
+function formatExpiry(expiry: bigint) {
   if (expiry === 0n) return { expiry: null, expiryDate: null }
-
-  const [label, tld, ...rest] = name.split('.')
-  if (!label || tld !== 'eth' || rest.length > 0) {
-    return { expiry: null, expiryDate: null }
-  }
-
   return {
     expiry: expiry.toString(),
     expiryDate: new Date(Number(expiry) * 1000).toISOString(),
   }
 }
 
-export const whoisCommand = {
+export const whoisCommand = Cli.create('whois', {
   description: 'Show ENS registry owner, resolver, and .eth expiry for a name',
   args: z.object({
     name: z.string().describe('ENS name to inspect (e.g. vitalik.eth)'),
   }),
   options: globalOptions,
   env: globalEnv,
-  async run(c: any) {
+  async run(c) {
     const { client, chain } = clientFromContext(c)
-    const universalResolverAddress = c.options.universalResolver as `0x${string}` | undefined
-    const { isV2, ethRegistry } = await isV2Active(c, universalResolverAddress)
+    const { isV2, ethRegistry } = await isV2Active(c)
     const name = validateName(c.args.name)
     const node = namehash(name)
+    const label = eth2ldLabel(name)
 
     if (isV2) {
       // TODO: handle non-2LD .eth names
-      const labels = name.split('.')
-      if (labels.length !== 2 || labels[1] !== 'eth') {
+      if (label == null) {
         throw new Error(`v2 whois only supports 2LD .eth names for now`)
       }
-      const label = labels[0]!
 
-      const { resolver } = await client.readContract({
-        address: universalResolverAddress ?? addresses[chain].universalResolver,
-        abi: universalResolverAbi,
-        functionName: 'findResolver',
-        args: [bytesToHex(packetToBytes(name))],
-      })
+      const [{ resolver }, { status, expiry, latestOwner, tokenId, resource }] = await Promise.all([
+        client.readContract({
+          address: universalResolverAddress(c, chain),
+          abi: universalResolverAbi,
+          functionName: 'findResolver',
+          args: [bytesToHex(packetToBytes(name))],
+        }),
+        client.readContract({
+          address: ethRegistry,
+          abi: v2RegistryAbi,
+          functionName: 'getState',
+          args: [BigInt(labelhash(label))],
+        }),
+      ])
 
-      const { status, expiry, latestOwner, tokenId, resource } = await client.readContract({
-        address: ethRegistry,
-        abi: v2RegistryAbi,
-        functionName: 'getState',
-        args: [BigInt(labelhash(label))],
-      })
-
-      const owner = await client.readContract({
-        address: ethRegistry,
-        abi: v2RegistryAbi,
-        functionName: 'ownerOf',
-        args: [tokenId],
-      })
+      // ownerOf reverts for nonexistent tokens, so only read it for registered names
+      const owner =
+        mapStatus(status) === 'REGISTERED'
+          ? await client.readContract({
+              address: ethRegistry,
+              abi: v2RegistryAbi,
+              functionName: 'ownerOf',
+              args: [tokenId],
+            })
+          : zeroAddress
 
       return {
         name,
@@ -85,14 +88,14 @@ export const whoisCommand = {
         resolver: toNullableAddress(resolver),
         registry: ethRegistry,
         status: mapStatus(status),
-        ...getExpiryDetails(name, expiry),
+        ...formatExpiry(expiry),
         latestOwner: toNullableAddress(latestOwner),
         tokenId: tokenId.toString(),
         resource: resource.toString(),
       }
     }
 
-    const [owner, resolver] = await Promise.all([
+    const [owner, resolver, expiry] = await Promise.all([
       client.readContract({
         address: addresses[chain].registry,
         abi: ensRegistryAbi,
@@ -105,24 +108,21 @@ export const whoisCommand = {
         functionName: 'resolver',
         args: [node],
       }),
+      label == null
+        ? Promise.resolve(0n)
+        : client.readContract({
+            address: addresses[chain].baseRegistrar,
+            abi: baseRegistrarAbi,
+            functionName: 'nameExpires',
+            args: [BigInt(labelhash(label))],
+          }),
     ])
-
-    let expiry: bigint | null = null
-    const [label, tld, ...rest] = name.split('.')
-    if (label && tld === 'eth' && rest.length === 0) {
-      expiry = await client.readContract({
-        address: addresses[chain].baseRegistrar,
-        abi: baseRegistrarAbi,
-        functionName: 'nameExpires',
-        args: [BigInt(labelhash(label))],
-      })
-    }
 
     return {
       name,
       owner: toNullableAddress(owner),
       resolver: toNullableAddress(resolver),
-      ...getExpiryDetails(name, expiry ?? 0n),
+      ...formatExpiry(expiry),
     }
   },
-}
+})

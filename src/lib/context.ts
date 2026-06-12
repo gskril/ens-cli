@@ -12,46 +12,57 @@ export const globalEnv = z.object({
   ETH_RPC_URL: z.string().optional().describe('Ethereum RPC URL (fallback if --rpc not provided)'),
 })
 
-type Context = {
-  options: { rpc?: string; chain?: string }
+export type Context = {
+  options: { rpc?: string; chain?: Chain; universalResolver?: string }
   env: { ETH_RPC_URL?: string }
 }
 
 export function clientFromContext(c: Context) {
-  const chain = (c.options.chain ?? 'mainnet') as Chain
+  const chain = c.options.chain ?? 'mainnet'
   const rpc = c.options.rpc ?? c.env.ETH_RPC_URL
   return { client: createEnsClient({ rpc, chain }), chain }
 }
 
+export function universalResolverOverride(c: Context): `0x${string}` | undefined {
+  return c.options.universalResolver as `0x${string}` | undefined
+}
+
+/** Spreadable `universalResolverAddress` param for viem ENS actions. */
+export function universalResolverParam(c: Context) {
+  const universalResolverAddress = universalResolverOverride(c)
+  return universalResolverAddress ? { universalResolverAddress } : {}
+}
+
+export function universalResolverAddress(c: Context, chain: Chain): `0x${string}` {
+  return universalResolverOverride(c) ?? addresses[chain].universalResolver
+}
+
 // Switch to help with logic around ENSv2
 // Check if the UR implements `findCanonicalRegistry()`, which only exists in v2
-export async function isV2Active(c: Context, universalResolverAddress: `0x${string}` | undefined) {
+export async function isV2Active(c: Context) {
   const { client, chain } = clientFromContext(c)
 
   try {
     const ethRegistry = await client.readContract({
-      address: universalResolverAddress ?? addresses[chain].universalResolver,
+      address: universalResolverAddress(c, chain),
       abi: universalResolverAbi,
       functionName: 'findCanonicalRegistry',
       args: ['0x0365746800'],
     })
 
-    return { isV2: true, ethRegistry }
+    return { isV2: true, ethRegistry } as const
   } catch {
     return { isV2: false } as const
   }
 }
 
+export async function activeV2Deployment(c: Context) {
+  const { isV2 } = await isV2Active(c)
+  if (!isV2) return undefined
+  return v2DeploymentForChain(c.options.chain ?? 'mainnet')
+}
+
 export function v2DeploymentForChain(chain: Chain) {
-  const chainAddresses = addresses[chain] as (typeof addresses)[Chain] & {
-    v2?: {
-      registry: `0x${string}`
-      registrar: `0x${string}`
-      paymentToken: `0x${string}`
-      resolverFactory: `0x${string}`
-      resolverImplementation: `0x${string}`
-      resolverProxyLogic: `0x${string}`
-    }
-  }
-  return chainAddresses.v2
+  const chainAddresses = addresses[chain]
+  return 'v2' in chainAddresses ? chainAddresses.v2 : undefined
 }

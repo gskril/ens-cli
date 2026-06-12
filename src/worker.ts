@@ -50,10 +50,11 @@
 
 import { Cli, Mcp, z } from 'incur'
 import { McpServer, WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/server'
+import packageJson from '../package.json'
 import { cli } from './cli.ts'
 
 const NAME = 'ens'
-const VERSION = '0.1.0'
+const VERSION = packageJson.version
 
 function buildMcpServer() {
   const server = new McpServer({ name: NAME, version: VERSION })

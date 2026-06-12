@@ -1,21 +1,18 @@
-import { z } from 'incur'
-import { formatEther, formatUnits } from 'viem/utils'
-import { ethRegistrarAbi, ethRegistrarControllerAbi, addresses } from '../lib/contracts.ts'
-import {
-  globalOptions,
-  globalEnv,
-  clientFromContext,
-  isV2Active,
-  v2DeploymentForChain,
-} from '../lib/context.ts'
-import { extractLabel } from '../lib/utils.ts'
+import { Cli, z } from 'incur'
+import { formatEther, formatUnits, getAddress } from 'viem/utils'
 import { erc20Abi } from 'viem'
+import { ethRegistrarAbi, ethRegistrarControllerAbi, addresses } from '../lib/contracts.ts'
+import { globalOptions, globalEnv, clientFromContext, activeV2Deployment } from '../lib/context.ts'
+import { extractLabel, durationFromOption } from '../lib/utils.ts'
 
-const ONE_YEAR = 31536000n
-
-export const priceCommand = {
-  description:
-    'Check the registration or renewal cost for an ENS name. Returns a bufferedTotal (with 5% buffer) to use as the transaction value. IMPORTANT: Always fetch price immediately before sending the register/renew transaction, not earlier, because ENS prices are denominated in USD but paid in ETH, so the required ETH amount changes with the ETH/USD price.',
+export const priceCommand = Cli.create('price', {
+  description: 'Check the registration or renewal cost for an ENS name.',
+  // incur supports `hint` on leaf CLIs at runtime (shown in --help and skill
+  // bodies) but omits it from create.Options, so spread past the excess
+  // property check.
+  ...{
+    hint: 'Fetch the price immediately before sending the register/renew transaction (prices are USD-denominated) and use the returned bufferedTotal as the transaction value.',
+  },
   args: z.object({
     name: z.string().describe('ENS name to price (e.g. myname.eth)'),
   }),
@@ -33,15 +30,16 @@ export const priceCommand = {
   ),
   env: globalEnv,
   alias: { duration: 'd', paymentToken: 'p' },
-  async run(c: any) {
+  async run(c) {
     const { client, chain } = clientFromContext(c)
     const label = extractLabel(c.args.name)
-    const duration = c.options.duration != null ? BigInt(c.options.duration) : ONE_YEAR
-    const { isV2 } = await isV2Active(c, c.options.universalResolver as `0x${string}` | undefined)
-    const v2Deployment = isV2 ? v2DeploymentForChain(chain) : undefined
+    const duration = durationFromOption(c.options.duration)
+    const v2Deployment = await activeV2Deployment(c)
 
     if (v2Deployment) {
-      const paymentToken = (c.options.paymentToken ?? v2Deployment.paymentToken) as `0x${string}`
+      const paymentToken = c.options.paymentToken
+        ? getAddress(c.options.paymentToken)
+        : v2Deployment.paymentToken
       const price = await client.readContract({
         address: v2Deployment.registrar,
         abi: ethRegistrarAbi,
@@ -90,7 +88,7 @@ export const priceCommand = {
         chain === 'sepolia' &&
         paymentToken.toLowerCase() === v2Deployment.paymentToken.toLowerCase()
       ) {
-        return c.ok({
+        return {
           ...result,
           testTokenHint:
             'Sepolia uses a dummy USDC ERC-20 for ENSv2 testing. It has open minting, so mint test tokens before approving the registrar.',
@@ -101,7 +99,7 @@ export const priceCommand = {
             amountFormatted: decimals == null ? null : formatUnits(total, decimals),
             example: `cast send ${paymentToken} "mint(address,uint256)" <your-address> ${total.toString()} --rpc-url <sepolia-rpc> --private-key <key>`,
           },
-        })
+        }
       }
 
       return result
@@ -128,4 +126,4 @@ export const priceCommand = {
       note: 'bufferedTotal includes a 5% buffer to account for ETH price fluctuations. Use bufferedTotal as the value for register/renew transactions. Any excess ETH is refunded by the contract.',
     }
   },
-}
+})

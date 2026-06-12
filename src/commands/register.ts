@@ -1,18 +1,9 @@
 import { Cli, z } from 'incur'
-import { encodeFunctionData, toHex } from 'viem/utils'
+import { zeroAddress, zeroHash } from 'viem'
+import { encodeFunctionData, getAddress, toHex } from 'viem/utils'
 import { ethRegistrarAbi, ethRegistrarControllerAbi, addresses } from '../lib/contracts.ts'
-import {
-  globalOptions,
-  globalEnv,
-  clientFromContext,
-  isV2Active,
-  v2DeploymentForChain,
-} from '../lib/context.ts'
-import { extractLabel } from '../lib/utils.ts'
-
-const ONE_YEAR = 31536000n
-const ZERO_BYTES32 = '0x0000000000000000000000000000000000000000000000000000000000000000' as const
-const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000' as const
+import { globalOptions, globalEnv, clientFromContext, activeV2Deployment } from '../lib/context.ts'
+import { extractLabel, asHex, durationFromOption } from '../lib/utils.ts'
 
 function generateSecret(): `0x${string}` {
   const bytes = new Uint8Array(32)
@@ -47,7 +38,7 @@ function buildRegistration(opts: {
     resolver: opts.resolver,
     data: [],
     reverseRecord: opts.reverseRecord ? 1 : 0,
-    referrer: ZERO_BYTES32,
+    referrer: zeroHash,
   }
 }
 
@@ -91,17 +82,18 @@ export const registerCommands = Cli.create('register', {
     async run(c) {
       const { client, chain } = clientFromContext(c)
       const label = extractLabel(c.args.name)
-      const owner = c.args.owner as `0x${string}`
-      const duration = c.options.duration != null ? BigInt(c.options.duration) : ONE_YEAR
-      const secret = (c.options.secret ?? generateSecret()) as `0x${string}`
-      const { isV2 } = await isV2Active(c, c.options.universalResolver as `0x${string}` | undefined)
-      const v2Deployment = isV2 ? v2DeploymentForChain(chain) : undefined
+      const owner = getAddress(c.args.owner)
+      const duration = durationFromOption(c.options.duration)
+      const secret = c.options.secret ? asHex(c.options.secret, 'secret') : generateSecret()
+      const v2Deployment = await activeV2Deployment(c)
 
       if (v2Deployment) {
-        const subregistry = (c.options.subregistry ?? ZERO_ADDRESS) as `0x${string}`
-        const resolver = (c.options.resolver ?? ZERO_ADDRESS) as `0x${string}`
-        const paymentToken = (c.options.paymentToken ?? v2Deployment.paymentToken) as `0x${string}`
-        const referrer = (c.options.referrer ?? ZERO_BYTES32) as `0x${string}`
+        const subregistry = c.options.subregistry ? getAddress(c.options.subregistry) : zeroAddress
+        const resolver = c.options.resolver ? getAddress(c.options.resolver) : zeroAddress
+        const paymentToken = c.options.paymentToken
+          ? getAddress(c.options.paymentToken)
+          : v2Deployment.paymentToken
+        const referrer = c.options.referrer ? asHex(c.options.referrer, 'referrer') : zeroHash
 
         const commitment = await client.readContract({
           address: v2Deployment.registrar,
@@ -117,7 +109,7 @@ export const registerCommands = Cli.create('register', {
         })
 
         const resolverHint =
-          resolver === ZERO_ADDRESS
+          resolver === zeroAddress
             ? `Optional: deploy a per-account resolver with: ens resolver deploy ${owner} --chain ${chain}, then re-run commit/reveal with --resolver <addr>.`
             : undefined
 
@@ -144,13 +136,15 @@ export const registerCommands = Cli.create('register', {
             '2. Wait at least 60 seconds after the tx is mined',
             `3. Run: ens price ${c.args.name} --chain ${chain} --paymentToken ${paymentToken}`,
             `4. Approve ${v2Deployment.registrar} to spend the total ERC-20 price`,
-            `5. Run: ens register reveal ${c.args.name} ${c.args.owner} --chain ${chain} --secret ${secret} --paymentToken ${paymentToken}${resolver === ZERO_ADDRESS ? '' : ` --resolver ${resolver}`}`,
+            `5. Run: ens register reveal ${c.args.name} ${c.args.owner} --chain ${chain} --secret ${secret} --paymentToken ${paymentToken}${resolver === zeroAddress ? '' : ` --resolver ${resolver}`}`,
           ],
         }
       }
 
       const controllerAddress = addresses[chain].controller
-      const resolver = (c.options.resolver ?? addresses[chain].resolver) as `0x${string}`
+      const resolver = c.options.resolver
+        ? getAddress(c.options.resolver)
+        : addresses[chain].resolver
       const reverseRecord = c.options.reverseRecord ?? false
 
       const registration = buildRegistration({
@@ -234,17 +228,18 @@ export const registerCommands = Cli.create('register', {
     async run(c) {
       const { chain } = clientFromContext(c)
       const label = extractLabel(c.args.name)
-      const owner = c.args.owner as `0x${string}`
-      const duration = c.options.duration != null ? BigInt(c.options.duration) : ONE_YEAR
-      const secret = c.options.secret as `0x${string}`
-      const { isV2 } = await isV2Active(c, c.options.universalResolver as `0x${string}` | undefined)
-      const v2Deployment = isV2 ? v2DeploymentForChain(chain) : undefined
+      const owner = getAddress(c.args.owner)
+      const duration = durationFromOption(c.options.duration)
+      const secret = asHex(c.options.secret, 'secret')
+      const v2Deployment = await activeV2Deployment(c)
 
       if (v2Deployment) {
-        const subregistry = (c.options.subregistry ?? ZERO_ADDRESS) as `0x${string}`
-        const resolver = (c.options.resolver ?? ZERO_ADDRESS) as `0x${string}`
-        const paymentToken = (c.options.paymentToken ?? v2Deployment.paymentToken) as `0x${string}`
-        const referrer = (c.options.referrer ?? ZERO_BYTES32) as `0x${string}`
+        const subregistry = c.options.subregistry ? getAddress(c.options.subregistry) : zeroAddress
+        const resolver = c.options.resolver ? getAddress(c.options.resolver) : zeroAddress
+        const paymentToken = c.options.paymentToken
+          ? getAddress(c.options.paymentToken)
+          : v2Deployment.paymentToken
+        const referrer = c.options.referrer ? asHex(c.options.referrer, 'referrer') : zeroHash
 
         const data = encodeFunctionData({
           abi: ethRegistrarAbi,
@@ -276,7 +271,9 @@ export const registerCommands = Cli.create('register', {
       }
 
       const controllerAddress = addresses[chain].controller
-      const resolver = (c.options.resolver ?? addresses[chain].resolver) as `0x${string}`
+      const resolver = c.options.resolver
+        ? getAddress(c.options.resolver)
+        : addresses[chain].resolver
       const reverseRecord = c.options.reverseRecord ?? false
 
       const registration = buildRegistration({
