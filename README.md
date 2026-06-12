@@ -106,7 +106,7 @@ ens resolver deploy 0xYourAddress --chain sepolia --json
 # Returns: { to, data, value, resolver, alreadyDeployed, ... }
 ```
 
-The resolver address is derived from `(factory, proxyLogic, deployer, salt)`, so the deploy transaction must be sent from `deployer`. The salt defaults to `keccak256("ens-v2-resolver:<deployer>")` — one resolver per account.
+The resolver address is derived from `(factory, proxyLogic, deployer, salt)`, so the deploy transaction must be sent from `deployer`. The salt defaults to `keccak256(abi.encode(keccak256("OwnedResolver"), owner, 0))` where `owner` is the admin the resolver is initialized with — the canonical scheme shared with the contracts-v2 setup script and the manager app's migration flow, so the resolver can be rediscovered from the owner address alone.
 
 Options: `--admin` (defaults to deployer), `--salt` (decimal or 0x hex), `--role-bitmap` (decimal or 0x hex, default `0x1111…1111`).
 

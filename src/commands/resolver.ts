@@ -36,9 +36,22 @@ const DEFAULT_ROLE_BITMAP = BigInt(
   '0x1111111111111111111111111111111111111111111111111111111111111111',
 )
 
-function parseSalt(salt: string | undefined, deployer: `0x${string}`): bigint {
+// Canonical salt scheme shared with the contracts-v2 setup script and the
+// manager app's migration flow, which matches this salt to detect whether an
+// account already has an owned resolver.
+const OWNED_RESOLVER_ID = keccak256(stringToBytes('OwnedResolver'))
+const OWNED_RESOLVER_VERSION = 0n
+
+function parseSalt(salt: string | undefined, owner: `0x${string}`): bigint {
   if (salt) return BigInt(salt)
-  return BigInt(keccak256(stringToBytes(`ens-v2-resolver:${deployer.toLowerCase()}`)))
+  return BigInt(
+    keccak256(
+      encodeAbiParameters(
+        [{ type: 'bytes32' }, { type: 'address' }, { type: 'uint256' }],
+        [OWNED_RESOLVER_ID, owner, OWNED_RESOLVER_VERSION],
+      ),
+    ),
+  )
 }
 
 function computeProxyAddress(opts: {
@@ -94,7 +107,7 @@ export const resolverCommands = Cli.create('resolver', {
           .string()
           .optional()
           .describe(
-            'CREATE2 salt as decimal or 0x hex (default: keccak256("ens-v2-resolver:<deployer>"))',
+            'CREATE2 salt as decimal or 0x hex (default: keccak256(abi.encode(keccak256("OwnedResolver"), admin, 0)))',
           ),
         roleBitmap: z
           .string()
@@ -112,7 +125,7 @@ export const resolverCommands = Cli.create('resolver', {
 
       const deployer = getAddress(c.args.deployer)
       const admin = c.options.admin ? getAddress(c.options.admin) : deployer
-      const salt = parseSalt(c.options.salt, deployer)
+      const salt = parseSalt(c.options.salt, admin)
       const roleBitmap = c.options.roleBitmap ? BigInt(c.options.roleBitmap) : DEFAULT_ROLE_BITMAP
 
       const initializeData = encodeFunctionData({
