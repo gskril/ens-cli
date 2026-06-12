@@ -12,8 +12,7 @@ import { whoisCommand } from './commands/whois.ts'
 
 export const cli = Cli.create('ens', {
   version: packageJson.version,
-  description:
-    'ENS CLI for resolving names, checking availability, generating registration and record-setting calldata. Designed for autonomous agents. Use --rpc <url> or ETH_RPC_URL env var to set the RPC endpoint. Use --chain mainnet|sepolia to select the network.',
+  description: 'Read ENS data and generate unsigned transaction calldata for name management.',
   mcp: {
     command: 'npx "https://pkg.pr.new/gskril/ens-cli/@ensdomains/cli@main" --mcp',
   },
