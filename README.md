@@ -1,7 +1,7 @@
 # ENS CLI
 
 > [!WARNING]
-> This is an unofficial ENS tool. It's experimental and will have frequent breaking changes.
+> This is an experimental preview. It is not production-ready and may include frequent breaking changes. Do not rely on it for production workflows, high-value ENS names, or critical ENS management. It is intended for testing and feedback only.
 
 A command-line tool for interacting with ENS (Ethereum Name Service). Built for autonomous AI agents but works for humans too.
 
