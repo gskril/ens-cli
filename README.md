@@ -8,7 +8,7 @@ A command-line tool for interacting with ENS (Ethereum Name Service). Built for 
 The CLI handles two categories of operations:
 
 - **Read operations** (resolution, availability, pricing) execute directly and return results.
-- **Write operations** (registration, renewal, record setting) output unsigned calldata as JSON (`{to, data, value}`) for the caller to sign and broadcast.
+- **Write operations** (registration, renewal, record setting) output unsigned calldata as JSON (`{to, data, value}`) for the caller to sign and broadcast. For testing, you can send transactions with raw calldata at [transact.swiss-knife.xyz/send-tx](https://transact.swiss-knife.xyz/send-tx).
 
 Built with [Incur](https://github.com/wevm/incur) for agent-native features (MCP server mode, skills, token-efficient output) and [viem](https://viem.sh) for ENS resolution with full CCIP-read support.
 
