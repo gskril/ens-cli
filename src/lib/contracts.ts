@@ -226,8 +226,15 @@ export const universalResolverAbi = parseAbi([
 
 export const v2RegistryAbi = parseAbi([
   'function getState(uint256 anyId) external view returns ((uint8 status, uint64 expiry, address latestOwner, uint256 tokenId, uint256 resource))',
+  'function getSubregistry(string label) external view returns (address)',
+  'function register(string label, address owner, address registry, address resolver, uint256 roleBitmap, uint64 expires) external returns (uint256 tokenId)',
   'function ownerOf(uint256 tokenId) external view returns (address)',
   'function setResolver(uint256 anyId, address resolver) external',
+  'function setSubregistry(uint256 tokenId, address registry) external',
+])
+
+export const userRegistryAbi = parseAbi([
+  'function initialize(address rootAccount, uint256 roleBitmap) external',
 ])
 
 export const verifiableFactoryAbi = parseAbi([
@@ -267,6 +274,7 @@ export const addresses = {
       resolverFactory: '0xd2A632D8A8b67C2c4398c255CBd7Af8Dd7236198',
       resolverImplementation: '0xdcE5205A553573FFd47629327DDdf36186022FfA',
       resolverProxyLogic: '0x917C561a74Df398646e06f3FFAA51DB8e8330C5A',
+      subregistryImplementation: '0x0F99e7Ea74903AfCB7224d0354fD7428A6f92917',
     },
   },
 } as const

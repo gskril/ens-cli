@@ -82,7 +82,7 @@ ens register reveal myname.eth \
 
 Options for both commands: `--duration` (seconds, default 1 year), `--resolver`, `--reverse-record`.
 
-On ENSv2 (Sepolia), `--resolver` defaults to the zero address. To register with a working resolver, deploy a per-account permissioned resolver first (see below) and pass its address via `--resolver`.
+On ENSv2 (Sepolia), `--resolver` defaults to the owner's deployed permissioned resolver when the canonical owned resolver already exists; otherwise it falls back to the zero address. To register with a working resolver when one is not deployed yet, deploy a per-account permissioned resolver first (see below) and pass its address via `--resolver`.
 
 ### Resolver management
 
@@ -97,7 +97,7 @@ Transaction must be sent from the name owner (or an approved operator).
 
 ### Resolver deployment (ENSv2)
 
-ENSv2 registers do not set a resolver by default — the v1 Public Resolver can't be reused because its authorisation is gated by the v1 registry, which knows nothing about v2-registered names. Instead, each owner deploys their own `PermissionedResolver` proxy through the v2 `VerifiableFactory`.
+ENSv2 names use per-account `PermissionedResolver` proxies. The v1 Public Resolver can't be reused because its authorisation is gated by the v1 registry, which knows nothing about v2-registered names. Each owner can deploy their own resolver through the v2 `VerifiableFactory`; ENSv2 registration and subname creation commands use that resolver by default when it is already deployed.
 
 ```sh
 # Predicts the CREATE2 address and emits deployProxy calldata.
@@ -109,6 +109,20 @@ ens resolver deploy 0xYourAddress --chain sepolia --json
 The resolver address is derived from `(factory, proxyLogic, deployer, salt)`, so the deploy transaction must be sent from `deployer`. The salt defaults to `keccak256(abi.encode(keccak256("OwnedResolver"), owner, 0))` where `owner` is the admin the resolver is initialized with — the canonical scheme shared with the contracts-v2 setup script and the manager app's migration flow, so the resolver can be rediscovered from the owner address alone.
 
 Options: `--admin` (defaults to deployer), `--salt` (decimal or 0x hex), `--role-bitmap` (decimal or 0x hex, default `0x1111…1111`).
+
+### Subregistry management (ENSv2)
+
+ENSv2 subnames are created inside a parent name's subregistry. A name must have a subregistry set before `ens subname create` can register children under it.
+
+```sh
+# Deploy a UserRegistry for a name if it does not already have one.
+ens subregistry deploy parent.eth --deployer 0xYourAddress --chain sepolia --json
+
+# Wire the deployed registry into the parent name.
+ens subregistry set parent.eth --registry 0xSubregistry --chain sepolia
+```
+
+`subregistry deploy` returns `alreadySet=true` when the name already has a subregistry. The proxy address is derived from `(factory, deployer, salt)`, so the deploy transaction must be sent from `--deployer`. The default salt is `keccak256(abi.encode(keccak256("UserRegistry"), namehash(name), 0))`, and the default initializer grants the root account all UserRegistry roles.
 
 ### Renewal
 
@@ -122,9 +136,12 @@ ens renew myname.eth --value 2307947853431408 --json
 
 ### Subnames
 
-Generate calldata to create a subname under a parent you own. The command first reads the parent's onchain owner — if there is no owner, no calldata can be generated. If the parent is wrapped in the NameWrapper, the calldata targets the NameWrapper instead of the registry.
+Generate calldata to create a subname under a parent you own. On ENSv2, the command walks the registry hierarchy and targets the parent's subregistry. If the parent has no subregistry, deploy one with `ens subregistry deploy` and set it with `ens subregistry set` first. On ENSv1, the command reads the parent's onchain owner; if the parent is wrapped in the NameWrapper, the calldata targets the NameWrapper instead of the registry.
 
 ```sh
+# Create an ENSv2 subname under a parent with a subregistry
+ens subname create sub.parent.eth --owner 0xNewOwner --chain sepolia
+
 # Create a subname under an unwrapped parent (registry.setSubnodeRecord)
 ens subname create sub.parent.eth --owner 0xNewOwner
 
@@ -135,7 +152,7 @@ ens subname create sub.wrapped.eth --owner 0xNewOwner --fuses 0 --expiry 0
 ens subname create sub.parent.eth --owner 0xNewOwner --resolver 0x...
 ```
 
-Options: `--resolver` (defaults to chain public resolver), `--fuses` and `--expiry` (NameWrapper only, both default to 0).
+Options: `--resolver` (defaults to the owner's deployed resolver on ENSv2 when found, chain public resolver on ENSv1), `--subregistry`, `--duration`, and `--role-bitmap` (ENSv2), `--fuses` and `--expiry` (NameWrapper only, both default to 0).
 
 ### Setting Records
 

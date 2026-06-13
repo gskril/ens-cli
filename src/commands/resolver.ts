@@ -1,17 +1,6 @@
 import { Cli, z } from 'incur'
 import { zeroAddress } from 'viem'
-import {
-  concat,
-  encodeAbiParameters,
-  encodeFunctionData,
-  getAddress,
-  getContractAddress,
-  isAddressEqual,
-  isHex,
-  keccak256,
-  stringToBytes,
-  toHex,
-} from 'viem/utils'
+import { encodeFunctionData, getAddress, isAddressEqual, isHex, toHex } from 'viem/utils'
 import { labelhash, namehash } from 'viem/ens'
 import {
   addresses,
@@ -29,59 +18,15 @@ import {
   v2DeploymentForChain,
 } from '../lib/context.ts'
 import { validateName, eth2ldLabel } from '../lib/utils.ts'
+import { ALL_ROLES, computeOwnedResolverAddress, defaultOwnedResolverSalt } from '../lib/v2.ts'
 
 // ENSv2's EnhancedAccessControl packs each role into a 4-bit group, so a 1 in
 // every nibble grants the admin all roles (ALL_ROLES in the ENSv2 contracts).
-const DEFAULT_ROLE_BITMAP = BigInt(
-  '0x1111111111111111111111111111111111111111111111111111111111111111',
-)
-
-// Canonical salt scheme shared with the contracts-v2 setup script and the
-// manager app's migration flow, which matches this salt to detect whether an
-// account already has an owned resolver.
-const OWNED_RESOLVER_ID = keccak256(stringToBytes('OwnedResolver'))
-const OWNED_RESOLVER_VERSION = 0n
+const DEFAULT_ROLE_BITMAP = ALL_ROLES
 
 function parseSalt(salt: string | undefined, owner: `0x${string}`): bigint {
   if (salt) return BigInt(salt)
-  return BigInt(
-    keccak256(
-      encodeAbiParameters(
-        [{ type: 'bytes32' }, { type: 'address' }, { type: 'uint256' }],
-        [OWNED_RESOLVER_ID, owner, OWNED_RESOLVER_VERSION],
-      ),
-    ),
-  )
-}
-
-function computeProxyAddress(opts: {
-  factory: `0x${string}`
-  proxyLogic: `0x${string}`
-  deployer: `0x${string}`
-  salt: bigint
-}) {
-  const outerSalt = keccak256(
-    encodeAbiParameters([{ type: 'address' }, { type: 'uint256' }], [opts.deployer, opts.salt]),
-  )
-  // EIP-1167 minimal proxy creation code, except the runtime length byte is
-  // 0x4d (77) instead of 0x2d (45): the VerifiableFactory appends the 32-byte
-  // outer salt after the proxy runtime so deployments can be verified onchain.
-  const bytecode = concat([
-    '0x3d604d80600a3d3981f3363d3d373d3d3d363d73',
-    opts.proxyLogic,
-    '0x5af43d82803e903d91602b57fd5bf3',
-    outerSalt,
-  ])
-
-  return {
-    address: getContractAddress({
-      bytecode,
-      from: opts.factory,
-      opcode: 'CREATE2',
-      salt: outerSalt,
-    }),
-    outerSalt,
-  }
+  return defaultOwnedResolverSalt(owner)
 }
 
 export const resolverCommands = Cli.create('resolver', {
@@ -138,10 +83,11 @@ export const resolverCommands = Cli.create('resolver', {
         functionName: 'deployProxy',
         args: [v2Deployment.resolverImplementation, salt, initializeData],
       })
-      const proxy = computeProxyAddress({
+      const proxy = computeOwnedResolverAddress({
         factory: v2Deployment.resolverFactory,
         proxyLogic: v2Deployment.resolverProxyLogic,
         deployer,
+        owner: admin,
         salt,
       })
 

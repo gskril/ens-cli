@@ -4,6 +4,7 @@ import { encodeFunctionData, getAddress, toHex } from 'viem/utils'
 import { ethRegistrarAbi, ethRegistrarControllerAbi, addresses } from '../lib/contracts.ts'
 import { globalOptions, globalEnv, clientFromContext, activeV2Deployment } from '../lib/context.ts'
 import { extractLabel, asHex, durationFromOption } from '../lib/utils.ts'
+import { resolveDeployedOwnedResolver } from '../lib/v2.ts'
 
 function generateSecret(): `0x${string}` {
   const bytes = new Uint8Array(32)
@@ -63,7 +64,7 @@ export const registerCommands = Cli.create('register', {
           .string()
           .optional()
           .describe(
-            'Resolver address (defaults to chain public resolver on ENSv1, zero address on ENSv2). For ENSv2, deploy a per-account resolver via `ens resolver deploy <deployer>` and pass the result here.',
+            'Resolver address (defaults to chain public resolver on ENSv1; on ENSv2, defaults to the owner owned resolver if deployed, otherwise zero address).',
           ),
         subregistry: z
           .string()
@@ -88,7 +89,14 @@ export const registerCommands = Cli.create('register', {
 
       if (v2Deployment) {
         const subregistry = c.options.subregistry ? getAddress(c.options.subregistry) : zeroAddress
-        const resolver = c.options.resolver ? getAddress(c.options.resolver) : zeroAddress
+        const resolver = c.options.resolver
+          ? getAddress(c.options.resolver)
+          : await resolveDeployedOwnedResolver({
+              client,
+              factory: v2Deployment.resolverFactory,
+              proxyLogic: v2Deployment.resolverProxyLogic,
+              owner,
+            })
         const paymentToken = c.options.paymentToken
           ? getAddress(c.options.paymentToken)
           : v2Deployment.paymentToken
@@ -123,6 +131,12 @@ export const registerCommands = Cli.create('register', {
           owner,
           duration: duration.toString(),
           resolver,
+          resolverSource:
+            c.options.resolver != null
+              ? 'option'
+              : resolver === zeroAddress
+                ? 'none'
+                : 'ownedResolver',
           subregistry,
           paymentToken,
           referrer,
@@ -135,7 +149,7 @@ export const registerCommands = Cli.create('register', {
             '2. Wait at least 60 seconds after the tx is mined',
             `3. Run: ens price ${c.args.name} --chain ${chain} --paymentToken ${paymentToken}`,
             `4. Approve ${v2Deployment.registrar} to spend the total ERC-20 price`,
-            `5. Run: ens register reveal ${c.args.name} --owner ${owner} --chain ${chain} --secret ${secret} --paymentToken ${paymentToken}${resolver === zeroAddress ? '' : ` --resolver ${resolver}`}`,
+            `5. Run: ens register reveal ${c.args.name} --owner ${owner} --chain ${chain} --secret ${secret} --paymentToken ${paymentToken} --resolver ${resolver}`,
           ],
         }
       }
@@ -209,7 +223,12 @@ export const registerCommands = Cli.create('register', {
           .number()
           .optional()
           .describe('Registration duration in seconds (must match commit)'),
-        resolver: z.string().optional().describe('Resolver address (must match commit)'),
+        resolver: z
+          .string()
+          .optional()
+          .describe(
+            'Resolver address (must match commit; defaults to deployed owner owned resolver on ENSv2, otherwise zero)',
+          ),
         subregistry: z
           .string()
           .optional()
@@ -224,7 +243,7 @@ export const registerCommands = Cli.create('register', {
     ),
     env: globalEnv,
     async run(c) {
-      const { chain } = clientFromContext(c)
+      const { client, chain } = clientFromContext(c)
       const label = extractLabel(c.args.name)
       const owner = getAddress(c.options.owner)
       const duration = durationFromOption(c.options.duration)
@@ -233,7 +252,14 @@ export const registerCommands = Cli.create('register', {
 
       if (v2Deployment) {
         const subregistry = c.options.subregistry ? getAddress(c.options.subregistry) : zeroAddress
-        const resolver = c.options.resolver ? getAddress(c.options.resolver) : zeroAddress
+        const resolver = c.options.resolver
+          ? getAddress(c.options.resolver)
+          : await resolveDeployedOwnedResolver({
+              client,
+              factory: v2Deployment.resolverFactory,
+              proxyLogic: v2Deployment.resolverProxyLogic,
+              owner,
+            })
         const paymentToken = c.options.paymentToken
           ? getAddress(c.options.paymentToken)
           : v2Deployment.paymentToken
@@ -254,6 +280,12 @@ export const registerCommands = Cli.create('register', {
           owner,
           duration: duration.toString(),
           resolver,
+          resolverSource:
+            c.options.resolver != null
+              ? 'option'
+              : resolver === zeroAddress
+                ? 'none'
+                : 'ownedResolver',
           subregistry,
           paymentToken,
           referrer,

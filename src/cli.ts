@@ -8,6 +8,7 @@ import { renewCommand } from './commands/renew.ts'
 import { resolverCommands } from './commands/resolver.ts'
 import { setCommands } from './commands/set.ts'
 import { subnameCommands } from './commands/subname.ts'
+import { subregistryCommands } from './commands/subregistry.ts'
 import { whoisCommand } from './commands/whois.ts'
 
 export const cli = Cli.create('ens', {
@@ -29,3 +30,4 @@ export const cli = Cli.create('ens', {
   .command(resolverCommands)
   .command(setCommands)
   .command(subnameCommands)
+  .command(subregistryCommands)
